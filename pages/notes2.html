@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notepad</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+    :root {
+      --bg: #0d0d0f;
+      --bg-elevated: #141417;
+      --fg: #e8e6e3;
+      --muted: #6b6b6b;
+      --accent: #ff6b35;
+      --accent-dim: rgba(255, 107, 53, 0.15);
+      --card: #1a1a1e;
+      --border: #2a2a2e;
+      --success: #4ade80;
+      --text-size: 15px;
+    }
+
+    [data-theme="light"] {
+      --bg: #f4f4f5;
+      --bg-elevated: #ffffff;
+      --fg: #18181b;
+      --muted: #71717a;
+      --accent: #f97316;
+      --accent-dim: rgba(249, 115, 22, 0.1);
+      --card: #ffffff;
+      --border: #e4e4e7;
+      --success: #22c55e;
+    }
+
+    [data-theme="solarized"] {
+      --bg: #002b36;
+      --bg-elevated: #073642;
+      --fg: #839496;
+      --muted: #586e75;
+      --accent: #b58900;
+      --accent-dim: rgba(181, 137, 0, 0.2);
+      --card: #073642;
+      --border: #094552;
+      --success: #2aa198;
+    }
+
+    [data-theme="pk-light"] {
+      --bg: #f5f5f5;
+      --bg-elevated: #ffffff;
+      --fg: #1a1a1a;
+      --muted: #888888;
+      --accent: #ff2e00; 
+      --accent-dim: rgba(255, 46, 0, 0.1);
+      --card: #ffffff;
+      --border: #e0e0e0;
+      --success: #00ff00;
+    }
+    
+    [data-theme="pk-dark"] {
+      --bg: #0a0a0a;
+      --bg-elevated: #141414;
+      --fg: #ffffff;
+      --muted: #666666;
+      --accent: #ff2e00;
+      --accent-dim: rgba(255, 46, 0, 0.15);
+      --card: #1a1a1a;
+      --border: #333333;
+      --success: #00ff00;
+    }
+
+    [data-theme="pk-cool"] {
+      --bg: #505255;
+      --bg-elevated: #303235;
+      --fg: #1c1e21;
+      --muted: #65676b;
+      --accent: #007bff;
+      --accent-dim: rgba(0, 123, 255, 0.1);
+      --card: #a0a2a5;
+      --border: #007bff;
+      --success: #42b72a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      transition: background 0.3s ease, color 0.3s ease;
+      font-size: var(--text-size);
+    }
+
+    .noise-bg {
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Tabs */
+    .tab-item {
+      position: relative;
+      padding: 0.75rem 1.25rem;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      max-width: 180px;
+      color: var(--muted);
+    }
+
+    .tab-item:hover { background: var(--bg-elevated); color: var(--fg); }
+
+    .tab-item.active {
+      background: var(--card);
+      border-color: var(--border);
+      border-bottom-color: var(--card);
+      color: var(--fg);
+    }
+
+    .tab-item.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .tab-title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.875rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: text;
+    }
+
+    .tab-title-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--fg);
+      font-family: inherit;
+      font-size: inherit;
+      font-weight: inherit;
+      width: 100%;
+    }
+
+    .tab-delete {
+      opacity: 0;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+      color: var(--muted);
+      display: flex;
+      flex-shrink: 0;
+    }
+
+    .tab-item:hover .tab-delete { opacity: 1; }
+    .tab-delete:hover { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+    .new-tab-group {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0 0.25rem;
+    }
+
+    .new-tab-btn {
+      padding: 0.75rem 1rem;
+      background: transparent;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+    }
+
+    .new-tab-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    /* Editor */
+    .editor-container {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0 12px 12px 12px;
+      height: calc(100vh - 180px);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .editor-textarea {
+      width: 100%;
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      padding: 2rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: calc(var(--text-size) - 2px);
+      line-height: 1.75;
+      color: var(--fg);
+    }
+
+    .editor-textarea::placeholder { color: var(--muted); }
+    .editor-textarea:focus { outline: none; }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: var(--bg-elevated);
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .save-indicator { display: flex; align-items: center; gap: 0.5rem; }
+    .save-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    /* Scrap Space */
+    .scrap-canvas {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg);
+      background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+      background-size: 24px 24px;
+      overflow: hidden;
+    }
+
+    .scrap-toolbar {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      z-index: 100;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      padding: 0.5rem;
+      border-radius: 8px;
+      display: flex;
+      gap: 0.5rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .scrap-toolbar button {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 6px;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+    }
+
+    .scrap-toolbar button:hover { background: var(--border); color: var(--fg); }
+    .scrap-toolbar button.active { background: var(--accent-dim); color: var(--accent); }
+
+    /* Sticky Note */
+    .sticky-note {
+      position: absolute;
+      min-width: 150px;
+      min-height: 100px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      transition: box-shadow 0.2s;
+      z-index: 10;
+      overflow: hidden; 
+      resize: both;
+    }
+
+    .sticky-note:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+    .sticky-note.selected { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .sticky-header {
+      padding: 0.5rem 0.75rem;
+      cursor: grab;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+      height: 32px;
+      flex-shrink: 0;
+    }
+
+    .sticky-header:active { cursor: grabbing; }
+
+    .sticky-actions {
+      display: flex;
+      gap: 0.25rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .sticky-note:hover .sticky-actions { opacity: 1; }
+
+    .sticky-btn {
+      background: rgba(0,0,0,0.1);
+      border: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(0,0,0,0.6);
+      transition: background 0.15s;
+    }
+
+    .sticky-btn:hover { background: rgba(0,0,0,0.2); color: rgba(0,0,0,0.9); }
+
+    .sticky-textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      resize: none;
+      padding: 0.75rem;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: var(--text-size);
+      line-height: 1.5;
+      color: #222;
+      outline: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Add this inside your <style> block */
+    .connection-color-row {
+      display: flex;
+      gap: 6px;
+      padding: 6px;
+      justify-content: center;
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+
+    /* Global Color Menu */
+    .sticky-color-menu {
+      position: absolute;
+      display: none;
+      flex-direction: row;
+      gap: 4px;
+      padding: 6px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      z-index: 10000;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    }
+    
+    .sticky-color-menu.visible { display: flex; }
+
+    .sticky-color-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+    
+    .sticky-color-dot:hover { border-color: white; transform: scale(1.1); }
+
+    /* Arrows */
+    .arrows-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      /* REMOVED pointer-events: none; so lines can be clicked */
+      z-index: 5;
+    }
+
+    .arrow-group { pointer-events: none; /* Group doesn't catch events, children do */ }
+    
+    .arrow-hit-area {
+      stroke: transparent;
+      stroke-width: 20px; 
+      pointer-events: stroke; /* Catches clicks on the line stroke */
+      cursor: pointer;
+    }
+
+    .arrow-line {
+      stroke-width: 3px;
+      fill: none;
+      pointer-events: none; /* The visual line doesn't catch clicks */
+      transition: stroke 0.2s;
+    }
+
+    .arrow-group:hover .arrow-line {
+      stroke-width: 4px;
+      filter: drop-shadow(0 0 4px rgba(255,255,255,0.3));
+    }
+
+    /* Context Menu */
+    .context-menu {
+      position: absolute;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.25rem;
+      z-index: 1000;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      flex-direction: column;
+      min-width: 120px;
+	  display: none;
+    }
+
+    .context-menu.visible { display: flex; }
+
+    .context-menu button {
+      background: none;
+      border: none;
+      color: var(--fg);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      font-size: 0.8125rem;
+      cursor: pointer;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: inherit;
+    }
+
+    .context-menu button:hover { background: var(--accent-dim); }
+    .context-menu .divider { height: 1px; background: var(--border); margin: 0.25rem 0; }
+
+    /* Modal */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        backdrop-filter: blur(4px);
+        z-index: 2000;
+        display: none;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .modal-overlay.visible { display: flex; }
+    
+    .modal-content {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 2rem;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        animation: modalIn 0.2s ease-out;
+    }
+    
+    @keyframes modalIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Header Utilities */
+    .header-title-input {
+        background: transparent;
+        border: none;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--fg);
+        padding: 0;
+        outline: none;
+        width: auto;
+        min-width: 100px;
+        max-width: 300px;
+    }
+    
+    .header-title-input:focus {
+        border-bottom: 2px solid var(--accent);
+        margin-bottom: -2px;
+    }
+    
+    /* Theme Button Styles */
+    .theme-option-btn {
+        padding: 0.5rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: var(--fg);
+        transition: all 0.2s;
+    }
+    
+    .theme-option-btn:hover {
+        border-color: var(--muted);
+    }
+    
+    .theme-option-btn.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+    }
+
+    /* Misc */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="noise-bg"></div>
+
+  <!-- Global Color Menu (Hidden by default) -->
+  <div id="stickyColorMenu" class="sticky-color-menu"></div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal-overlay">
+      <div class="modal-content">
+          <div class="flex justify-between items-center mb-6">
+              <h2 class="text-xl font-semibold" style="color: var(--fg)">Settings</h2>
+              <button id="closeSettingsBtn" class="p-1 rounded hover:bg-gray-500/20" style="color: var(--muted)">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+          </div>
+          
+          <div class="space-y-6">
+              <!-- Theme -->
+              <div>
+                  <label class="block text-sm font-medium mb-2" style="color: var(--muted)">Theme</label>
+                  <div class="flex gap-2 flex-wrap" id="themeOptions"></div>
+              </div>
+
+              <!-- Text Size -->
+              <div>
+                  <label class="block text-sm font-medium mb-2" style="color: var(--muted)">Text Size: <span id="textSizeLabel">15px</span></label>
+                  <input type="range" id="textSizeSlider" min="12" max="24" value="15" class="w-full h-2 rounded-lg appearance-none cursor-pointer" style="background: var(--border)">
+              </div>
+
+              <!-- Actions -->
+              <div class="grid grid-cols-2 gap-4 pt-4 border-t" style="border-color: var(--border)">
+                  <button id="exportBtn" class="p-2 rounded text-sm font-medium border" style="border-color: var(--border); color: var(--fg)">
+                      Export Notebook
+                  </button>
+                  <label class="p-2 rounded text-sm font-medium border text-center cursor-pointer" style="border-color: var(--border); color: var(--fg)">
+                      Import Notebook
+                      <input type="file" id="importFile" class="hidden" accept=".json">
+                  </label>
+              </div>
+              
+              <div class="grid grid-cols-2 gap-4">
+                  <button id="fullscreenBtn" class="p-2 rounded text-sm font-medium" style="background: var(--accent); color: #fff">
+                      Toggle Fullscreen
+                  </button>
+                  <button id="resetBtn" class="p-2 rounded text-sm font-medium border border-red-500 text-red-500 hover:bg-red-500/10">
+                      Reset Notebook
+                  </button>
+              </div>
+          </div>
+	<p class="text-center text-sm">Spag Ghetti, 2026</p>
+      </div>
+  </div>
+
+  <!-- Context Menu for Connections -->
+  <div id="connectionContextMenu" class="context-menu">
+    <button data-action="delete">Delete</button>
+    <div class="divider"></div>
+    <button data-action="solid">Solid Line</button>
+    <button data-action="dashed">Dashed Line</button>
+    <button data-action="dotted">Dotted Line</button>
+    <div class="divider"></div>
+      <!-- New Color Picker Container -->
+      <div id="connectionColorPicker" class="connection-color-row"></div>
+  </div>
+
+  <main class="relative z-10 max-w-6xl mx-auto px-4 py-6 h-screen flex flex-col">
+    <!-- Header -->
+    <header class="mb-4 flex justify-between items-center">
+      <div class="flex items-center gap-2">
+          <input type="text" id="mainTitleInput" class="header-title-input" value="My Notebook" aria-label="Notebook Title">
+      </div>
+      <div class="flex items-center gap-2">
+          <button id="settingsBtn" class="p-2 rounded-full hover:bg-white/10 transition-colors" style="color: var(--muted)" title="Settings">
+             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </button>
+      </div>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="flex items-end gap-1 overflow-x-auto pb-0" id="tabsContainer" role="tablist" aria-label="Note tabs"></nav>
+
+    <!-- Editor / Canvas Container -->
+    <div class="editor-container flex-1" id="editorContainer"></div>
+  </main>
+
+  <script>
+    // --- Constants & State ---
+    const STORAGE_KEY = 'notepad_rip_v5';
+    const DEFAULT_TAB_NAME = 'Untitled';
+    const STICKY_COLORS = [
+      { name: 'white', bg: '#f0f0f0', header: '#d0d0d0' },
+      { name: 'yellow', bg: '#fef08a', header: '#facc15' },
+      { name: 'pink', bg: '#fbcfe8', header: '#f472b6' },
+      { name: 'blue', bg: '#bfdbfe', header: '#60a5fa' },
+      { name: 'green', bg: '#bbf7d0', header: '#4ade80' },
+      { name: 'orange', bg: '#fed7aa', header: '#fb923c' },
+      { name: 'purple', bg: '#e9d5ff', header: '#c084fc' },
+    ];
+
+    const CONNECTION_COLORS = [
+      { name: 'White', hex: '#ffffff' },
+      { name: 'Orange', hex: '#f97316' },
+      { name: 'Pink', hex: '#fbcfe8'},
+      { name: 'Yellow', hex: '#eab308' },
+      { name: 'Green', hex: '#22c55e' },
+      { name: 'Blue', hex: '#3b82f6' },
+      { name: 'Purple', hex: '#a855f7' }
+    ];
+
+    const THEMES = [
+        { id: 'dark', name: 'Dark' },
+        { id: 'light', name: 'Light' },
+        { id: 'solarized', name: 'Solarized' },
+        { id: 'pk-light', name: 'PK Light' },
+        { id: 'pk-dark', name: 'PK Dark' },
+        { id: 'pk-cool', name: 'PK Blue' },
+    ];
+
+    let state = {
+        tabs: [],
+        activeTabId: null,
+        theme: 'dark',
+        textSize: 15,
+        notebookTitle: 'My Notebook'
+    };
+
+    let saveTimeout = null;
+    
+    // Scrap Space State
+    let draggingNote = null;
+    let dragOffset = { x: 0, y: 0 };
+    let connectingFrom = null;
+    let activeColorTarget = null; // ID of note being colored
+
+    // DOM Elements
+    const tabsContainer = document.getElementById('tabsContainer');
+    const editorContainer = document.getElementById('editorContainer');
+    const contextMenu = document.getElementById('connectionContextMenu');
+    const settingsModal = document.getElementById('settingsModal');
+    const mainTitleInput = document.getElementById('mainTitleInput');
+    const stickyColorMenu = document.getElementById('stickyColorMenu');
+
+    // --- Utilities ---
+    const generateId = () => Math.random().toString(36).substr(2, 9);
+    const escapeHtml = (text) => {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    };
+
+    // --- Data Persistence ---
+    function loadData() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          state = { ...state, ...parsed };
+        }
+      } catch (e) {
+        console.error('Failed to load data:', e);
+      }
+
+      if (state.tabs.length === 0) createTab('First Note', 'text', true);
+      if (!state.activeTabId || !state.tabs.find(t => t.id === state.activeTabId)) state.activeTabId = state.tabs[0].id;
+      
+      applySettings();
+    }
+
+    function saveData() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        updateStorageStatus();
+        flashSaveStatus();
+      } catch (e) {
+        console.error('Failed to save data:', e);
+        alert('Error saving notes! Storage might be full.');
+      }
+    }
+
+    function debouncedSave() {
+      clearTimeout(saveTimeout);
+      updateStatusText('Saving...');
+      saveTimeout = setTimeout(saveData, 600);
+    }
+    
+    function updateStatusText(text) {
+      const status = document.getElementById('statusText');
+      if(status) status.textContent = text;
+    }
+
+    function flashSaveStatus() {
+      updateStatusText('Saved');
+      setTimeout(() => updateStatusText('Auto-saved'), 1500);
+    }
+    
+    function updateStorageStatus() {
+        const el = document.getElementById('storageUsage');
+        if(el) {
+            const bytes = new Blob([JSON.stringify(state)]).size;
+            el.textContent = `${(bytes / 1024).toFixed(1)} KB`;
+        }
+    }
+    
+    function applySettings() {
+        document.body.dataset.theme = state.theme;
+        document.documentElement.style.setProperty('--text-size', `${state.textSize}px`);
+        
+        const slider = document.getElementById('textSizeSlider');
+        const label = document.getElementById('textSizeLabel');
+        if(slider) slider.value = state.textSize;
+        if(label) label.textContent = `${state.textSize}px`;
+        
+        mainTitleInput.value = state.notebookTitle;
+        
+        // Update active theme button using CSS classes
+        document.querySelectorAll('.theme-option-btn').forEach(btn => {
+            const isActive = btn.dataset.theme === state.theme;
+            btn.classList.toggle('active', isActive);
+        });
+    }
+
+    // --- Tab Logic ---
+
+    function createTab(title = DEFAULT_TAB_NAME, type = 'text', isInit = false) {
+      forceSaveCurrentState();
+
+      const newTab = {
+        id: generateId(),
+        title: title,
+        type: type,
+        content: type === 'text' ? '' : null,
+        scrapData: type === 'scrap' ? { notes: [], connections: [] } : null,
+        createdAt: Date.now()
+      };
+      state.tabs.push(newTab);
+      state.activeTabId = newTab.id;
+      
+      if (!isInit) saveData();
+      renderTabs();
+      renderEditor();
+      return newTab;
+    }
+
+    function deleteTab(tabId, event) {
+		if(confirm("Are you sure you want to delete this tab? This cannot be undone.")) {
+
+		  event.stopPropagation();
+		  forceSaveCurrentState();
+
+		  if (state.tabs.length === 1) {
+		    const tab = state.tabs[0];
+		    if (tab.type === 'text') tab.content = '';
+		    else tab.scrapData = { notes: [], connections: [] };
+		    tab.title = tab.type === 'text' ? 'Untitled' : 'Scrap Space';
+		    renderTabs();
+		    renderEditor();
+		    saveData();
+		    return;
+		  }
+
+		  state.tabs = state.tabs.filter(t => t.id !== tabId);
+		  if (state.activeTabId === tabId) state.activeTabId = state.tabs[Math.max(0, state.tabs.length - 1)].id;
+		  
+		  saveData();
+		  renderTabs();
+		  renderEditor();
+        }
+    }
+
+    function switchTab(tabId) {
+      if (state.activeTabId === tabId) return;
+      forceSaveCurrentState();
+
+      saveData();
+      state.activeTabId = tabId;
+      renderTabs();
+      renderEditor();
+    }
+    
+    function forceSaveCurrentState() {
+        const tab = state.tabs.find(t => t.id === state.activeTabId);
+        if (!tab) return;
+
+        if (tab.type === 'text') {
+            const editor = document.getElementById('noteEditor');
+            if (editor) {
+                tab.content = editor.value;
+                const firstLine = editor.value.split('\n')[0].trim();
+                tab.title = firstLine.substring(0, 30) || DEFAULT_TAB_NAME;
+                const titleEl = document.querySelector(`[data-tab-id="${tab.id}"] .title-text`);
+                if(titleEl) titleEl.textContent = tab.title;
+            }
+        } else {
+            tab.scrapData.notes.forEach(note => {
+                const dom = document.querySelector(`.sticky-note[data-id="${note.id}"]`);
+                if(dom) {
+                    note.width = dom.offsetWidth;
+                    note.height = dom.offsetHeight;
+                    note.x = parseFloat(dom.style.left);
+                    note.y = parseFloat(dom.style.top);
+                }
+            });
+        }
+    }
+    
+    function renameTab(tabId, newTitle) {
+        const tab = state.tabs.find(t => t.id === tabId);
+        if(tab) {
+            tab.title = newTitle.trim() || (tab.type === 'text' ? 'Untitled' : 'Scrap Space');
+            saveData();
+            renderTabs();
+        }
+    }
+
+    // --- Linking Logic ---
+    function handleWikiLinkClick(e) {
+        if (!(e.ctrlKey || e.metaKey)) return;
+        const textarea = e.target;
+        const value = textarea.value;
+        const index = textarea.selectionStart;
+        const linkRegex = /\[\[(.*?)\]\]/g;
+        let match;
+        
+        while((match = linkRegex.exec(value)) !== null) {
+            const start = match.index;
+            const end = start + match[0].length;
+            if (index >= start && index <= end) {
+                const linkTitle = match[1];
+                const targetTab = state.tabs.find(t => t.title.toLowerCase() === linkTitle.toLowerCase());
+                if (targetTab) switchTab(targetTab.id);
+                else alert(`Note "${linkTitle}" not found.`);
+                e.preventDefault();
+                return;
+            }
+        }
+    }
+
+    // --- Rendering ---
+
+    function renderTabs() {
+      tabsContainer.innerHTML = '';
+
+      state.tabs.forEach(tab => {
+        const isActive = tab.id === state.activeTabId;
+        const tabEl = document.createElement('button');
+        tabEl.className = `tab-item ${isActive ? 'active' : ''}`;
+        tabEl.setAttribute('role', 'tab');
+        tabEl.dataset.tabId = tab.id;
+        
+        const icon = tab.type === 'scrap' 
+          ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect></svg>`
+          : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+
+        tabEl.innerHTML = `
+          <span class="tab-title">${icon} <span class="title-text">${escapeHtml(tab.title)}</span></span>
+          <span class="tab-delete" aria-label="Delete note" title="Delete">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </span>
+        `;
+
+        tabEl.addEventListener('click', (e) => {
+            if (e.target.closest('.tab-delete') || e.target.tagName === 'INPUT') return;
+            switchTab(tab.id);
+        });
+
+        tabEl.querySelector('.title-text').addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            const titleSpan = e.target;
+            const currentTitle = tab.title;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'tab-title-input';
+            input.value = currentTitle;
+            
+            titleSpan.replaceWith(input);
+            input.focus();
+            input.select();
+
+            const finishRename = () => renameTab(tab.id, input.value);
+            
+            input.addEventListener('blur', finishRename);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') input.blur();
+                if (e.key === 'Escape') {
+                    input.value = currentTitle; 
+                    input.blur();
+                }
+            });
+        });
+
+        tabEl.querySelector('.tab-delete').addEventListener('click', (e) => deleteTab(tab.id, e));
+        tabsContainer.appendChild(tabEl);
+      });
+
+      const group = document.createElement('div');
+      group.className = 'new-tab-group';
+      
+      const newTextBtn = document.createElement('button');
+      newTextBtn.className = 'new-tab-btn';
+      newTextBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg><span>Text</span>`;
+      newTextBtn.addEventListener('click', () => createTab('New Note', 'text'));
+      
+      const newScrapBtn = document.createElement('button');
+      newScrapBtn.className = 'new-tab-btn';
+      newScrapBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect></svg><span>Scrap</span>`;
+      newScrapBtn.addEventListener('click', () => createTab('Scrap Space', 'scrap'));
+
+      group.appendChild(newTextBtn);
+      group.appendChild(newScrapBtn);
+      tabsContainer.appendChild(group);
+    }
+
+    function renderEditor() {
+      const tab = state.tabs.find(t => t.id === state.activeTabId);
+      if (!tab) return;
+
+      if (tab.type === 'text') {
+        renderTextEditor(tab);
+      } else {
+        renderScrapSpace(tab);
+      }
+    }
+
+    // --- Text Editor Mode ---
+    function renderTextEditor(tab) {
+      editorContainer.innerHTML = `
+        <textarea 
+          id="noteEditor" 
+          class="editor-textarea"
+          placeholder="Start typing..."
+          aria-label="Note content"
+        >${escapeHtml(tab.content)}</textarea>
+        <div class="status-bar">
+          <div class="save-indicator">
+            <span class="save-dot"></span>
+            <span id="statusText">Auto-saved</span>
+          </div>
+          <div class="flex items-center gap-4">
+             <span id="storageUsage" class="text-xs opacity-50"></span>
+             <span id="wordCount">${tab.content.trim() ? tab.content.trim().split(/\s+/).length : 0} words</span>
+          </div>
+        </div>
+      `;
+      
+      updateStorageStatus();
+
+      const textarea = document.getElementById('noteEditor');
+      
+      textarea.addEventListener('input', () => {
+		tab.content = textarea.value;
+        updateWordCount(textarea.value);
+        debouncedSave();
+        const firstLine = textarea.value.split('\n')[0].trim();
+        tab.title = firstLine.substring(0, 30) || DEFAULT_TAB_NAME;
+        const titleText = document.querySelector(`[data-tab-id="${tab.id}"] .title-text`);
+        if(titleText) titleText.textContent = tab.title;
+      });
+      
+      textarea.addEventListener('keydown', (e) => {
+          if (e.key === 'Tab') {
+              e.preventDefault();
+              const start = textarea.selectionStart;
+              const end = textarea.selectionEnd;
+              
+              if (e.shiftKey) {
+                  const lineStart = textarea.value.lastIndexOf('\n', start - 1) + 1;
+                  const lineText = textarea.value.substring(lineStart, start);
+                  if (lineText.startsWith('    ')) {
+                      textarea.value = textarea.value.substring(0, lineStart) + lineText.substring(4) + textarea.value.substring(start);
+                      textarea.selectionStart = textarea.selectionEnd = start - 4;
+                      textarea.dispatchEvent(new Event('input'));
+                  }
+              } else {
+                  textarea.value = textarea.value.substring(0, start) + '    ' + textarea.value.substring(end);
+                  textarea.selectionStart = textarea.selectionEnd = start + 4;
+                  textarea.dispatchEvent(new Event('input'));
+              }
+          }
+      });
+      
+      textarea.addEventListener('click', handleWikiLinkClick);
+    }
+
+    function updateWordCount(text) {
+      const wc = document.getElementById('wordCount');
+      if (wc) wc.textContent = `${text.trim() ? text.trim().split(/\s+/).length : 0} words`;
+    }
+
+    // --- Scrap Space Mode ---
+    
+    function renderScrapSpace(tab) {
+      editorContainer.innerHTML = `
+        <div class="scrap-toolbar">
+            <button id="addStickyBtn" title="Add Sticky Note">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+            </button>
+            <button id="connectModeBtn" title="Connect Notes">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="3"></circle><circle cx="19" cy="12" r="3"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+            </button>
+        </div>
+        <div class="scrap-canvas" id="scrapCanvas">
+            <svg class="arrows-layer" id="arrowsLayer"></svg>
+        </div>
+        <div class="status-bar">
+            <div class="save-indicator">
+                <span class="save-dot"></span>
+                <span id="statusText">Auto-saved</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span id="storageUsage" class="text-xs opacity-50"></span>
+                <span style="color: var(--muted); font-size: 0.75rem;">Drag headers. Resize corners. Click lines to style.</span>
+            </div>
+        </div>
+      `;
+
+      tab.scrapData.notes.forEach(note => addStickyToDOM(note));
+      drawArrows(tab.scrapData.connections);
+      
+      updateStorageStatus();
+
+      document.getElementById('addStickyBtn').addEventListener('click', createNewSticky);
+      document.getElementById('connectModeBtn').addEventListener('click', toggleConnectMode);
+
+      document.addEventListener('mousemove', handleDrag);
+      document.addEventListener('mouseup', stopDrag);
+    }
+
+    function createNewSticky() {
+      const tab = state.tabs.find(t => t.id === state.activeTabId);
+      if (!tab || tab.type !== 'scrap') return;
+
+      const canvas = document.getElementById('scrapCanvas');
+      const rect = canvas.getBoundingClientRect();
+      
+      const x = Math.random() * (rect.width - 250) + 20;
+      const y = Math.random() * (rect.height - 200) + 20;
+      const color = STICKY_COLORS[Math.floor(Math.random() * STICKY_COLORS.length)];
+
+      const note = {
+        id: generateId(),
+        x: x, y: y,
+        text: '',
+        color: color.name,
+        width: 220, height: 140
+      };
+
+      tab.scrapData.notes.push(note);
+      saveData();
+      addStickyToDOM(note);
+    }
+
+    function addStickyToDOM(note) {
+      const canvas = document.getElementById('scrapCanvas');
+      if (!canvas) return;
+
+      const colorDef = STICKY_COLORS.find(c => c.name === note.color) || STICKY_COLORS[0];
+
+      const div = document.createElement('div');
+      div.className = 'sticky-note';
+      div.setAttribute('data-id', note.id);
+      div.style.left = `${note.x}px`;
+      div.style.top = `${note.y}px`;
+      div.style.width = `${note.width}px`;
+      div.style.height = `${note.height}px`;
+      div.style.background = colorDef.bg;
+      
+      // No color palette inside anymore
+      div.innerHTML = `
+        <div class="sticky-header" style="background: ${colorDef.header}">
+          <div class="sticky-actions">
+             <button class="sticky-btn copy-btn" title="Copy Text">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+             </button>
+             <button class="sticky-btn color-btn" title="Change Color">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>
+             </button>
+             <button class="sticky-btn delete-btn" title="Delete">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+             </button>
+          </div>
+        </div>
+        <textarea class="sticky-textarea" placeholder="Type here...">${escapeHtml(note.text)}</textarea>
+      `;
+
+      const header = div.querySelector('.sticky-header');
+      const textarea = div.querySelector('.sticky-textarea');
+      
+      header.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.sticky-actions')) return;
+        startDrag(e, note.id);
+      });
+
+      textarea.addEventListener('input', (e) => {
+        updateNoteContent(note.id, e.target.value);
+      });
+      
+      textarea.addEventListener('click', handleWikiLinkClick);
+      
+      const resizeObserver = new ResizeObserver(() => {
+          updateNoteSize(note.id, div.offsetWidth, div.offsetHeight);
+      });
+      resizeObserver.observe(div);
+
+      // Copy
+      div.querySelector('.copy-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(textarea.value);
+        const btn = e.currentTarget;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        setTimeout(() => btn.innerHTML = originalHtml, 1500);
+      });
+
+      // Delete
+      div.querySelector('.delete-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteNote(note.id);
+      });
+
+      // Color - Global Menu Logic
+      div.querySelector('.color-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        activeColorTarget = note.id;
+        
+        // Position menu near button
+        const rect = e.currentTarget.getBoundingClientRect();
+        stickyColorMenu.style.left = `${rect.left}px`;
+        stickyColorMenu.style.top = `${rect.bottom + 5}px`;
+        stickyColorMenu.classList.add('visible');
+      });
+
+      div.addEventListener('click', (e) => {
+        if (document.body.classList.contains('connect-mode-active')) {
+           handleConnectionClick(note.id);
+        }
+      });
+
+      canvas.appendChild(div);
+    }
+
+    // --- Global Sticky Color Logic ---
+    function initGlobalColorMenu() {
+      STICKY_COLORS.forEach(c => {
+        const dot = document.createElement('div');
+        dot.className = 'sticky-color-dot';
+        dot.style.background = c.bg;
+        dot.dataset.color = c.name;
+        dot.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if(activeColorTarget) changeNoteColor(activeColorTarget, c.name);
+          stickyColorMenu.classList.remove('visible');
+          activeColorTarget = null;
+        });
+        stickyColorMenu.appendChild(dot);
+      });
+      
+      // Close on outside click
+      document.addEventListener('click', (e) => {
+        if(!e.target.closest('.sticky-color-menu') && !e.target.closest('.color-btn')) {
+            stickyColorMenu.classList.remove('visible');
+        }
+      });
+    }
+
+    function initConnectionColorPicker() {
+      const picker = document.getElementById('connectionColorPicker');
+      if (!picker) return;
+
+      picker.innerHTML = ''; // Clear existing
+
+      CONNECTION_COLORS.forEach(c => {
+        const dot = document.createElement('div');
+        dot.className = 'sticky-color-dot'; // Reuse the sticky note dot class
+        dot.style.background = c.hex;
+        dot.title = c.name;
+        
+        // Add click listener
+        dot.addEventListener('click', (e) => {
+          e.stopPropagation();
+          handleConnectionMenuAction('color', c.hex);
+        });
+        
+        picker.appendChild(dot);
+      });
+    }
+
+    // --- Scrap Logic Helpers ---
+
+    function getActiveScrapData() {
+      const tab = state.tabs.find(t => t.id === state.activeTabId);
+      return tab && tab.type === 'scrap' ? tab.scrapData : null;
+    }
+
+    function updateNoteContent(id, text) {
+      const data = getActiveScrapData();
+      if (!data) return;
+      const note = data.notes.find(n => n.id === id);
+      if (note) {
+        note.text = text;
+        debouncedSave();
+      }
+    }
+    
+    function updateNoteSize(id, w, h) {
+        const data = getActiveScrapData();
+        if (!data) return;
+        const note = data.notes.find(n => n.id === id);
+        if (note) {
+            note.width = Math.max(150, w);
+            note.height = Math.max(100, h);
+            drawArrows(data.connections);
+            debouncedSave();
+        }
+    }
+
+    function changeNoteColor(id, colorName) {
+      const data = getActiveScrapData();
+      if (!data) return;
+      const note = data.notes.find(n => n.id === id);
+      if (note) {
+        note.color = colorName;
+        saveData();
+        const el = document.querySelector(`.sticky-note[data-id="${id}"]`);
+        if (el) {
+          const colorDef = STICKY_COLORS.find(c => c.name === colorName);
+          el.style.background = colorDef.bg;
+          el.querySelector('.sticky-header').style.background = colorDef.header;
+        }
+      }
+    }
+
+    function deleteNote(id) {
+      const data = getActiveScrapData();
+      if (!data) return;
+      data.notes = data.notes.filter(n => n.id !== id);
+      data.connections = data.connections.filter(c => c.from !== id && c.to !== id);
+      saveData();
+      document.querySelector(`.sticky-note[data-id="${id}"]`)?.remove();
+      drawArrows(data.connections);
+    }
+
+    function startDrag(e, id) {
+      const el = document.querySelector(`.sticky-note[data-id="${id}"]`);
+      if (!el) return;
+      
+      draggingNote = { id, el };
+      const rect = el.getBoundingClientRect();
+      dragOffset.x = e.clientX - rect.left;
+      dragOffset.y = e.clientY - rect.top;
+      el.style.zIndex = 50;
+    }
+
+    function handleDrag(e) {
+      if (!draggingNote) return;
+      
+      const canvasRect = document.getElementById('scrapCanvas').getBoundingClientRect();
+      let x = e.clientX - canvasRect.left - dragOffset.x;
+      let y = e.clientY - canvasRect.top - dragOffset.y;
+
+      x = Math.max(0, Math.min(x, canvasRect.width - 50));
+      y = Math.max(0, Math.min(y, canvasRect.height - 50));
+
+      draggingNote.el.style.left = `${x}px`;
+      draggingNote.el.style.top = `${y}px`;
+      
+      const data = getActiveScrapData();
+      if(data) drawArrows(data.connections);
+    }
+
+    function stopDrag() {
+      if (!draggingNote) return;
+      
+      const el = draggingNote.el;
+      const id = draggingNote.id;
+      el.style.zIndex = 10;
+
+      const data = getActiveScrapData();
+      if (data) {
+        const note = data.notes.find(n => n.id === id);
+        if (note) {
+          note.x = parseFloat(el.style.left);
+          note.y = parseFloat(el.style.top);
+          saveData();
+        }
+      }
+      draggingNote = null;
+    }
+
+    // --- Connection Logic ---
+
+    function toggleConnectMode() {
+      const btn = document.getElementById('connectModeBtn');
+      const active = document.body.classList.toggle('connect-mode-active');
+      btn.classList.toggle('active', active);
+      connectingFrom = null;
+      document.querySelectorAll('.sticky-note').forEach(n => n.classList.remove('selected'));
+    }
+
+    function handleConnectionClick(id) {
+      if (!connectingFrom) {
+        connectingFrom = id;
+        document.querySelector(`.sticky-note[data-id="${id}"]`).classList.add('selected');
+      } else {
+        if (connectingFrom !== id) {
+          const data = getActiveScrapData();
+          const exists = data.connections.some(c => 
+            (c.from === connectingFrom && c.to === id) || (c.from === id && c.to === connectingFrom)
+          );
+          
+          if (!exists) {
+            data.connections.push({ from: connectingFrom, to: id, style: 'dashed', color: '#ffffff' });
+            saveData();
+            drawArrows(data.connections);
+          }
+        }
+        
+        document.querySelector(`.sticky-note[data-id="${connectingFrom}"]`)?.classList.remove('selected');
+        connectingFrom = null;
+        toggleConnectMode();
+      }
+    }
+
+    function drawArrows(connections) {
+      const svg = document.getElementById('arrowsLayer');
+      if (!svg) return;
+      svg.innerHTML = '';
+
+      connections.forEach((conn, index) => {
+        const fromEl = document.querySelector(`.sticky-note[data-id="${conn.from}"]`);
+        const toEl = document.querySelector(`.sticky-note[data-id="${conn.to}"]`);
+        
+        if (fromEl && toEl) {
+          const fromRect = fromEl.getBoundingClientRect();
+          const toRect = toEl.getBoundingClientRect();
+          const canvasRect = document.getElementById('scrapCanvas').getBoundingClientRect();
+
+          // Calculate centers relative to the canvas
+          const x1 = (fromRect.left - canvasRect.left) + fromRect.width / 2;
+          const y1 = (fromRect.top - canvasRect.top) + fromRect.height / 2;
+          
+          // FIX: Use toRect.width (not toEl.width) for correct coordinates
+          const x2 = (toRect.left - canvasRect.left) + toRect.width / 2;
+          const y2 = (toRect.top - canvasRect.top) + toRect.height / 2;
+
+          const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          group.classList.add('arrow-group');
+          
+          // 1. Visible Line (Bottom layer)
+          const visLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          visLine.setAttribute('x1', x1);
+          visLine.setAttribute('y1', y1);
+          visLine.setAttribute('x2', x2);
+          visLine.setAttribute('y2', y2);
+          visLine.setAttribute('stroke', conn.color || '#ffffff');
+          
+          if (conn.style === 'solid') visLine.setAttribute('stroke-dasharray', 'none');
+          else if (conn.style === 'dotted') visLine.setAttribute('stroke-dasharray', '2, 10');
+          else visLine.setAttribute('stroke-dasharray', '10, 10');
+          
+          visLine.classList.add('arrow-line');
+
+          // 2. Hit Area (Top layer - invisible but thick for clicking)
+          const hitLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          hitLine.setAttribute('x1', x1);
+          hitLine.setAttribute('y1', y1);
+          hitLine.setAttribute('x2', x2);
+          hitLine.setAttribute('y2', y2);
+          hitLine.classList.add('arrow-hit-area');
+          hitLine.addEventListener('click', (e) => showConnectionMenu(e, index));
+
+          // Append visual first, then hit area (so hit area is on top)
+          group.appendChild(visLine);
+          group.appendChild(hitLine);
+          svg.appendChild(group);
+        }
+      });
+    }
+    
+    function showConnectionMenu(e, index) {
+        contextMenu.style.left = `${e.clientX}px`;
+        contextMenu.style.top = `${e.clientY}px`;
+        contextMenu.style.display="flex";
+        contextMenu.dataset.index = index;
+    }
+    
+    function hideConnectionMenu() {
+        contextMenu.style.display="none";
+    }
+    
+    function handleConnectionMenuAction(action, value) {
+        const index = Number(contextMenu.dataset.index);
+        const data = getActiveScrapData();
+        if(!data || isNaN(index)) return;
+        
+        const conn = data.connections[index];
+        if(!conn) return;
+        
+        if (action === 'delete') {
+            data.connections.splice(index, 1);
+        } else if (action === 'solid' || action === 'dashed' || action === 'dotted') {
+            conn.style = action;
+        } else if (action === 'color') {
+            conn.color = value;
+        }
+        
+        saveData();
+        drawArrows(data.connections);
+		hideConnectionMenu();
+    }
+
+    // --- Settings & IO ---
+    
+    function exportNotebook() {
+        const dataStr = JSON.stringify(state, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${state.notebookTitle || 'notebook'}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    
+    function importNotebook(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (imported.tabs && Array.isArray(imported.tabs)) {
+                    state = imported;
+                    saveData();
+                    location.reload();
+                } else {
+                    alert("Invalid notebook file.");
+                }
+            } catch (err) {
+                alert("Error reading file.");
+            }
+        };
+        reader.readAsText(file);
+    }
+    
+    function resetNotebook() {
+        if(confirm("Are you sure you want to reset the notebook? This cannot be undone.")) {
+            localStorage.removeItem(STORAGE_KEY);
+            location.reload();
+        }
+    }
+
+    // --- Init ---
+    
+    function init() {
+      initGlobalColorMenu();
+initConnectionColorPicker(); 
+      loadData();
+      renderTabs();
+      renderEditor();
+      
+      const settingsBtn = document.getElementById('settingsBtn');
+      const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+      const textSizeSlider = document.getElementById('textSizeSlider');
+      const importFile = document.getElementById('importFile');
+      const exportBtn = document.getElementById('exportBtn');
+      const fullscreenBtn = document.getElementById('fullscreenBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      
+      settingsBtn.addEventListener('click', () => settingsModal.classList.add('visible'));
+      closeSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('visible'));
+      settingsModal.addEventListener('click', (e) => {
+          if(e.target === settingsModal) settingsModal.classList.remove('visible');
+      });
+      
+      const themeOptionsDiv = document.getElementById('themeOptions');
+      THEMES.forEach(t => {
+          const btn = document.createElement('button');
+          btn.className = 'theme-option-btn px-3 py-1 border rounded text-sm';
+          btn.style.borderColor = 'var(--border)';
+          btn.textContent = t.name;
+          btn.dataset.theme = t.id;
+          btn.onclick = () => {
+              state.theme = t.id;
+              applySettings();
+              saveData();
+          };
+          themeOptionsDiv.appendChild(btn);
+      });
+      
+      applySettings();
+      
+      textSizeSlider.addEventListener('input', (e) => {
+          state.textSize = parseInt(e.target.value);
+          applySettings();
+          saveData();
+      });
+      
+      exportBtn.addEventListener('click', exportNotebook);
+      importFile.addEventListener('change', (e) => {
+          if(e.target.files[0]) importNotebook(e.target.files[0]);
+      });
+      
+      fullscreenBtn.addEventListener('click', () => {
+          if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+          else document.exitFullscreen();
+      });
+      
+      resetBtn.addEventListener('click', resetNotebook);
+      
+      mainTitleInput.addEventListener('input', (e) => {
+          state.notebookTitle = e.target.value;
+          debouncedSave();
+      });
+
+      contextMenu.querySelectorAll('button[data-action]').forEach(btn => {
+          btn.addEventListener('click', () => {
+              handleConnectionMenuAction(btn.dataset.action, btn.dataset.color);
+          });
+      });
+
+      window.addEventListener('click', (e) => {
+          if (!contextMenu.contains(e.target) && !e.target.classList.contains("arrow-hit-area")) hideConnectionMenu();
+      });
+      
+      window.addEventListener('beforeunload', forceSaveCurrentState);
+    }
+
+    init();
+  </script>
+</body>
+</html>
