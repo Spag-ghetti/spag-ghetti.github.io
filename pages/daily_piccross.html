@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Minimalist Picross</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #000000;
+            --border: #000000;
+            --filled: #000000;
+            --empty: #ffffff;
+            --marked: #999999;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--bg);
+            color: var(--fg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+
+        h1 { font-size: 1rem; letter-spacing: 2px; margin-bottom: 10px; text-transform: uppercase; }
+        #date-display { font-size: 0.8rem; margin-bottom: 20px; opacity: 0.7; }
+
+        #game-container {
+            display: grid;
+            grid-template-columns: auto repeat(8, 1fr);
+            grid-template-rows: auto repeat(8, 1fr);
+            gap: 0px;
+            border: 2px solid var(--border);
+            background-color: var(--bg);
+            touch-action: none; /* Prevent scroll on mobile drag */
+        }
+
+        .cell {
+            width: 30px;
+            height: 30px;
+            box-sizing: border-box;
+            border: 1px solid var(--border);
+            background-color: var(--empty);
+            cursor: crosshair;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* 2x2 Visual Grouping Borders */
+        .cell[data-col="2"], .cell[data-col="4"], .cell[data-col="6"] { border-right-width: 2px; }
+        .cell[data-row="2"], .cell[data-row="4"], .cell[data-row="6"] { border-bottom-width: 2px; }
+        .cell[data-col="1"] { border-left-width: 2px; }
+        .cell[data-row="1"] { border-top-width: 2px; }
+        /* Outer right/bottom handled by container border, but let's ensure cells on edge match */
+        .cell[data-col="8"] { border-right-width: 2px; }
+        .cell[data-row="8"] { border-bottom-width: 2px; }
+
+
+        .hint {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: bold;
+            padding: 2px;
+            transition: opacity 0.2s;
+        }
+
+        .col-hints { flex-direction: column; padding-bottom: 5px; }
+        .row-hints { flex-direction: row; justify-content: flex-end; padding-right: 10px; }
+        .hint span { margin: 0 2px; }
+
+        .hint.completed { text-decoration: line-through; opacity: 0.3; }
+        
+        .filled { background-color: var(--filled); }
+        
+        .marked::after {
+            content: '×';
+            color: var(--marked);
+            font-size: 1.2rem;
+        }
+
+        #status { margin-top: 20px; font-size: 1.2rem; font-weight: bold; height: 1.5em; }
+
+    </style>
+</head>
+<body>
+
+    <h1>Picross Daily</h1>
+    <div id="date-display"></div>
+
+    <div id="game-container"></div>
+    <div id="status"></div>
+
+    <script>
+        // --- Audio System ---
+        let audioCtx = null;
+        function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+
+        function playTone(frequency, duration, type = 'square', volume = 0.1) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = type;
+            osc.frequency.value = frequency;
+            gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        const sound = {
+            fill: () => { initAudio(); playTone(800, 0.04, 'square', 0.05); },
+            mark: () => { initAudio(); playTone(200, 0.03, 'triangle', 0.08); playTone(80, 0.05, 'sine', 0.1); },
+            erase: () => { initAudio(); playTone(400, 0.03, 'sine', 0.05); },
+            lineComplete: () => { initAudio(); playTone(600, 0.05, 'square', 0.08); setTimeout(() => playTone(900, 0.1, 'square', 0.08), 50); },
+            win: () => {
+                initAudio();
+                playTone(262, 0.15, 'square', 0.1);
+                setTimeout(() => playTone(330, 0.15, 'square', 0.1), 100);
+                setTimeout(() => playTone(392, 0.15, 'square', 0.1), 200);
+                setTimeout(() => playTone(523, 0.4, 'square', 0.1), 300);
+            }
+        };
+
+        // --- Game State ---
+        const GRID_SIZE = 8;
+        const DATE_STR = new Date().toISOString().slice(0, 10);
+        
+        let solution = [];
+        let rowHints = [];
+        let colHints = [];
+        let cellElements = []; 
+        let rowHintElements = [];
+        let colHintElements = [];
+        let completedRows = new Set();
+        let completedCols = new Set();
+        
+        const container = document.getElementById('game-container');
+        const statusEl = document.getElementById('status');
+        
+        // --- Seeded Random Generator ---
+        function mulberry32(seed) {
+            return function() {
+                var t = seed += 0x6D2B79F5;
+                t = Math.imul(t ^ t >>> 15, t | 1);
+                t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+        }
+        function hashString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                hash |= 0;
+            }
+            return Math.abs(hash);
+        }
+
+        // --- Game Initialization ---
+        function initGame() {
+            statusEl.innerText = "";
+            container.innerHTML = '';
+            
+            completedRows.clear();
+            completedCols.clear();
+            cellElements = [];
+            rowHintElements = [];
+            colHintElements = [];
+
+            // Generate Solution
+            const seedVal = hashString(DATE_STR);
+            const random = mulberry32(seedVal);
+            
+            solution = [];
+            for (let r = 0; r < GRID_SIZE; r++) {
+                const row = [];
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    row.push(random() > 0.45 ? 1 : 0); 
+                }
+                solution.push(row);
+            }
+
+            // Calculate Hints
+            const getHints = (line) => {
+                const h = [];
+                let count = 0;
+                line.forEach(v => {
+                    if (v === 1) count++;
+                    else if (count > 0) { h.push(count); count = 0; }
+                });
+                if (count > 0) h.push(count);
+                return h.length === 0 ? [0] : h;
+            };
+
+            rowHints = solution.map(r => getHints(r));
+            const transposed = solution[0].map((_, i) => solution.map(r => r[i]));
+            colHints = transposed.map(c => getHints(c));
+
+            // Render DOM
+            const frag = document.createDocumentFragment();
+
+            // Spacer
+            frag.appendChild(document.createElement('div'));
+
+            // Col Headers
+            for (let c = 0; c < GRID_SIZE; c++) {
+                const div = document.createElement('div');
+                div.className = 'hint col-hints';
+                colHints[c].forEach(n => { const s = document.createElement('span'); s.innerText = n; div.appendChild(s); });
+                colHintElements.push(div);
+                frag.appendChild(div);
+            }
+
+            // Rows
+            for (let r = 0; r < GRID_SIZE; r++) {
+                const rowHintDiv = document.createElement('div');
+                rowHintDiv.className = 'hint row-hints';
+                rowHints[r].forEach(n => { const s = document.createElement('span'); s.innerText = n; rowHintDiv.appendChild(s); });
+                rowHintElements.push(rowHintDiv);
+                frag.appendChild(rowHintDiv);
+
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    frag.appendChild(cell);
+                    cellElements.push(cell);
+                }
+            }
+
+            container.appendChild(frag);
+        }
+
+        // --- Interaction State ---
+        let isDrawing = false;
+        let dragMode = null; // 'fill', 'mark', 'erase'
+
+        // Helper to apply state to a cell based on current drag mode
+        function applyDragState(cell, silent = false) {
+            if (!cell || !cell.classList.contains('cell')) return;
+
+            const isFilled = cell.classList.contains('filled');
+            const isMarked = cell.classList.contains('marked');
+
+            if (dragMode === 'fill') {
+                if (!isFilled) {
+                    cell.classList.remove('marked');
+                    cell.classList.add('filled');
+                    if (!silent) sound.fill();
+                }
+            } else if (dragMode === 'mark') {
+                if (!isMarked) {
+                    cell.classList.remove('filled');
+                    cell.classList.add('marked');
+                    if (!silent) sound.mark();
+                }
+            } else if (dragMode === 'erase') {
+                if (isFilled || isMarked) {
+                    cell.classList.remove('filled', 'marked');
+                    if (!silent) sound.erase();
+                }
+            }
+        }
+
+        // Mouse Down: Determine mode and apply first cell
+        container.addEventListener('mousedown', (e) => {
+            const cell = e.target.closest('.cell');
+            if (!cell) return;
+
+            isDrawing = true;
+            
+            const isFilled = cell.classList.contains('filled');
+            const isMarked = cell.classList.contains('marked');
+
+            // Determine Drag Mode based on what we clicked and which button
+            if (e.button === 2) { // Right Click
+                if (isMarked) dragMode = 'erase';
+                else dragMode = 'mark';
+            } else { // Left Click
+                if (isFilled) dragMode = 'erase';
+                else dragMode = 'fill';
+            }
+
+            applyDragState(cell); // Apply immediately
+            
+            checkLineCompletion();
+            checkWin();
+        });
+
+        // Mouse Move: Continue applying state
+        container.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            if (e.target.classList.contains('cell')) {
+                applyDragState(e.target, true); // Apply silently during drag
+            }
+        });
+
+        // Mouse Up: Finish
+        document.addEventListener('mouseup', () => {
+            if (isDrawing) {
+                isDrawing = false;
+                dragMode = null;
+                checkLineCompletion(); // Final check
+                checkWin();
+            }
+        });
+
+        container.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // --- Logic ---
+        function checkLineCompletion() {
+            // Rows
+            for (let r = 0; r < GRID_SIZE; r++) {
+                let isCorrect = true;
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const idx = r * GRID_SIZE + c;
+                    const isFilled = cellElements[idx].classList.contains('filled');
+                    if (isFilled !== (solution[r][c] === 1)) { isCorrect = false; break; }
+                }
+                
+                const el = rowHintElements[r];
+                if (isCorrect && !completedRows.has(r)) {
+                    el.classList.add('completed');
+                    sound.lineComplete();
+                    completedRows.add(r);
+                } else if (!isCorrect) {
+                    el.classList.remove('completed');
+                    completedRows.delete(r);
+                }
+            }
+
+            // Cols
+            for (let c = 0; c < GRID_SIZE; c++) {
+                let isCorrect = true;
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    const idx = r * GRID_SIZE + c;
+                    const isFilled = cellElements[idx].classList.contains('filled');
+                    if (isFilled !== (solution[r][c] === 1)) { isCorrect = false; break; }
+                }
+
+                const el = colHintElements[c];
+                if (isCorrect && !completedCols.has(c)) {
+                    el.classList.add('completed');
+                    sound.lineComplete();
+                    completedCols.add(c);
+                } else if (!isCorrect) {
+                    el.classList.remove('completed');
+                    completedCols.delete(c);
+                }
+            }
+        }
+
+        function checkWin() {
+            let isWin = true;
+            for (let i = 0; i < cellElements.length; i++) {
+                const r = Math.floor(i / GRID_SIZE);
+                const c = i % GRID_SIZE;
+                const isFilled = cellElements[i].classList.contains('filled');
+                if (isFilled !== (solution[r][c] === 1)) {
+                    isWin = false;
+                    break;
+                }
+            }
+
+            if (isWin) {
+                sound.win();
+                statusEl.innerText = "Solved!";
+            }
+        }
+
+        // --- Start ---
+        document.getElementById('date-display').innerText = DATE_STR;
+        initGame();
+
+    </script>
+</body>
+</html>

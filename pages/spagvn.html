@@ -1,0 +1,2434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpagVN - Visual Novel Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --bg-elevated: #12121a;
+      --bg-card: #1a1a24;
+      --fg: #e8e8ed;
+      --fg-muted: #6b6b7a;
+      --accent: #ff6b4a;
+      --accent-hover: #ff8a70;
+      --accent-glow: rgba(255, 107, 74, 0.3);
+      --border: #2a2a38;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --error: #f87171;
+      --cyan: #22d3ee;
+	  --text-background: linear-gradient(180deg, rgba(10, 10, 15, 0.55) 0%, rgba(10, 10, 15, 0.75) 100%);
+    }
+
+    [data-theme="light"] {
+      --bg: #f8f9fa;
+      --bg-elevated: #ffffff;
+      --bg-card: #e9ecef;
+      --fg: #212529;
+      --fg-muted: #6c757d;
+      --accent: #d63384;
+      --accent-hover: #c22477;
+      --accent-glow: rgba(214, 51, 132, 0.25);
+      --border: #dee2e6;
+      --success: #198754;
+      --warning: #ffc107;
+      --error: #dc3545;
+      --cyan: #0dcaf0;
+	  --text-background: linear-gradient(180deg, rgba(200, 200, 220, 0.55) 0%, rgba(200, 200, 220, 0.75) 100%);
+    }
+
+    [data-theme="muted"] {
+      --bg: #1f1f1f;
+      --bg-elevated: #282828;
+      --bg-card: #333333;
+      --fg: #dcdcdc;
+      --fg-muted: #888888;
+      --accent: #c0ad99;
+      --accent-hover: #6fdf88;
+      --accent-glow: rgba(128, 237, 153, 0.2);
+      --border: #404040;
+	  --text-background: linear-gradient(180deg, rgba(10, 10, 15, 0.55) 0%, rgba(10, 10, 15, 0.75) 100%);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      overflow-x: hidden;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .bg-atmosphere {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.6;
+      background: 
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-elevated) 100%);
+    }
+
+    .noise-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    }
+
+    /* Tab styling */
+    .tab-btn {
+      position: relative;
+      padding: 0.875rem 1.25rem;
+      color: var(--fg-muted);
+      font-weight: 500;
+      transition: all 0.2s ease;
+      border-bottom: 2px solid transparent;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover { color: var(--fg); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .panel {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      padding: 0.625rem 1.25rem;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--fg);
+      font-weight: 500;
+      padding: 0.625rem 1.25rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover { background: var(--border); border-color: var(--fg-muted); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--fg-muted);
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-ghost:hover { background: var(--bg-card); color: var(--fg); }
+
+    .btn-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--fg-muted);
+    }
+
+    .btn-icon:hover { background: var(--border); color: var(--fg); }
+    .btn-icon.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+    .input-field {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      color: var(--fg);
+      font-family: inherit;
+      font-size: 0.9375rem;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+
+    .input-field:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .input-field::placeholder { color: var(--fg-muted); }
+
+    select.input-field {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b6b7a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      padding-right: 2.5rem;
+    }
+
+    /* Player styles */
+    .player-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .player-container {
+      position: relative;
+      width: 100%;
+      max-width: 960px;
+      aspect-ratio: 16/9;
+      background: var(--bg-card);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .player-bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      transition: opacity 0.6s ease, filter 0.6s ease;
+    }
+
+    .player-bg.transitioning { opacity: 0; }
+
+    .player-sprites-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .player-sprite {
+      position: absolute;
+      bottom: 0;
+      height: 85%;
+      width: auto;
+      max-width: 35%;
+      object-fit: contain;
+      object-position: bottom center;
+      transition: all 0.3s ease;
+      filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.5));
+    }
+
+    .player-sprite.entering {
+      animation: spriteEnter 0.4s ease-out forwards;
+    }
+
+    @keyframes spriteEnter {
+      from { opacity: 0; margin-bottom: -30px; }
+      to { opacity: 1; margin-bottom: 0; }
+    }
+
+    .dialogue-box {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--text-background);
+      backdrop-filter: blur(8px);
+      padding: 1rem 1.25rem 1.25rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      min-height: 140px;
+    }
+
+    .speaker-name {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .dialogue-text {
+      font-size: 0.9375rem;
+      line-height: 1.7;
+      color: var(--fg);
+      min-height: 3.4em;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .choices-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      z-index: 10;
+      width: 80%;
+      max-width: 400px;
+    }
+
+    .choice-btn {
+      background: rgba(10, 10, 15, 0.85);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+      font-size: 0.9375rem;
+    }
+
+    .choice-btn:hover {
+      background: var(--bg-card);
+      border-color: var(--accent);
+      transform: translateX(8px);
+    }
+
+    .player-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: var(--bg-card);
+      padding: 0.25rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .history-panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 320px;
+      background: rgba(10, 10, 15, 0.95);
+      backdrop-filter: blur(12px);
+      border-left: 1px solid var(--border);
+      z-index: 20;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .history-panel.open { transform: translateX(0); }
+
+    .history-item {
+      padding: 0.875rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .save-slot {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .save-slot:hover { border-color: var(--accent); }
+    .save-slot.empty { opacity: 0.6; }
+
+    .scene-item {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    .scene-item:hover { background: var(--bg-card); }
+    .scene-item.active { background: var(--bg-card); border-color: var(--accent); }
+    .scene-item.has-choice { border-left: 3px solid var(--cyan); }
+
+    .char-instance-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .char-instance-card.speaking { border-color: var(--accent); }
+
+    .character-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .character-card:hover { border-color: var(--fg-muted); }
+    .character-card.active { border-color: var(--accent); }
+
+    .asset-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .asset-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .asset-card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; }
+
+    .mod-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .mod-card:hover { border-color: var(--fg-muted); }
+    .mod-card.active-mod { border-color: var(--success); }
+
+    .code-editor {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      color: var(--fg);
+      resize: vertical;
+      min-height: 200px;
+    }
+
+    .code-editor:focus { outline: none; border-color: var(--accent); }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.25rem 0.625rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .status-badge.locked { background: rgba(248, 113, 113, 0.15); color: var(--error); }
+    .status-badge.unlocked { background: rgba(74, 222, 128, 0.15); color: var(--success); }
+
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+
+    .stagger-children > * {
+      opacity: 0;
+      animation: slideUp 0.4s ease-out forwards;
+    }
+
+    .stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+    .stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+    .stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+    .stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--fg-muted); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 3rem;
+      text-align: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(255, 107, 74, 0.05); }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 300;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .modal-overlay.show { opacity: 1; visibility: visible; }
+
+    .modal-content {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      transform: scale(0.95);
+      transition: transform 0.3s ease;
+    }
+
+    .modal-overlay.show .modal-content { transform: scale(1); }
+
+    .label-sm {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--fg-muted);
+      margin-bottom: 0.25rem;
+      display: block;
+    }
+
+    .input-sm { padding: 0.5rem 0.75rem; font-size: 0.875rem; }
+
+    /* Range Slider Styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+
+    input[type=range]:focus {
+      outline: none;
+    }
+
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 6px;
+      cursor: pointer;
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -6px;
+      box-shadow: 0 0 8px var(--accent-glow);
+    }
+
+    /* Settings Theme Buttons */
+    .theme-btn {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      border: 2px solid var(--border);
+      background: var(--bg-card);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .theme-btn:hover { border-color: var(--fg-muted); }
+    .theme-btn.active { border-color: var(--accent); background: var(--border); }
+
+    @media (max-width: 768px) {
+      .tab-btn { padding: 0.75rem 1rem; font-size: 0.875rem; }
+      .player-container { border-radius: 8px; }
+      .dialogue-box { padding: 0.75rem 1rem 1rem; min-height: 120px; }
+      .history-panel { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-atmosphere"></div>
+  <div class="noise-overlay"></div>
+
+  <!-- Header with Tabs -->
+  <header class="border-b border-[var(--border)] bg-[var(--bg-elevated)]/80 backdrop-blur-sm sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 flex items-center justify-between overflow-x-auto">
+      <nav class="flex">
+        <button class="tab-btn active" data-tab="player">Player</button>
+        <button class="tab-btn" data-tab="editor">Editor</button>
+        <button class="tab-btn" data-tab="characters">Characters</button>
+        <button class="tab-btn" data-tab="assets">Assets</button>
+        <button class="tab-btn" data-tab="audio">Audio</button>
+        <button class="tab-btn" data-tab="mods">Mods</button>
+        <button class="tab-btn" data-tab="settings">Settings</button>
+      </nav>
+      <div class="flex items-center gap-2 shrink-0">
+        <span id="lockStatus" class="status-badge unlocked">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          Unlocked
+        </span>
+        <button onclick="importProject()" class="btn-icon" title="Import">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </button>
+        <button onclick="exportProject()" class="btn-icon" title="Export">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 py-6">
+
+    <!-- Player Panel -->
+    <div id="playerPanel" class="tab-panel animate-fade-in">
+      <div class="player-wrapper" id="playerWrapper">
+        <div class="player-container" id="playerContainer">
+          <div class="player-bg" id="playerBg"></div>
+          <div class="player-sprites-layer" id="spritesLayer"></div>
+          
+          <div class="choices-container" id="choicesContainer" style="display: none;"></div>
+          
+          <div class="dialogue-box" id="dialogueBox">
+            <div class="speaker-name" id="speakerName">-</div>
+            <div class="dialogue-text" id="dialogueText">No scenes yet. Create some in the Editor!</div>
+            <button class="next-btn" id="nextBtn" onclick="nextScene()">Next</button>
+          </div>
+
+          <div class="history-panel" id="historyPanel">
+            <div class="flex items-center justify-between p-4 border-b border-[var(--border)]">
+              <h3 class="font-semibold">Dialogue History</h3>
+              <button onclick="toggleHistory()" class="btn-ghost">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="flex-1 overflow-y-auto" id="historyContent">
+              <p class="text-[var(--fg-muted)] text-sm text-center py-8">No history yet</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="player-controls">
+          <span class="text-sm text-[var(--fg-muted)] mr-2">Scene <span id="currentSceneNum">0</span>/<span id="totalScenes">0</span></span>
+          
+          <div class="control-group">
+            <button onclick="toggleAuto()" class="btn-icon" id="autoBtn" title="Auto Play">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+            </button>
+            <button onclick="toggleSkip()" class="btn-icon" id="skipBtn" title="Skip">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>
+              </svg>
+            </button>
+            <button onclick="toggleHistory()" class="btn-icon" id="historyBtn" title="History">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="control-group">
+            <button onclick="showSaveModal()" class="btn-icon" title="Save">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+              </svg>
+            </button>
+            <button onclick="showLoadModal()" class="btn-icon" title="Load">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </button>
+            <button onclick="restartStory()" class="btn-icon" title="Restart">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="flex-1"></div>
+
+          <div class="control-group">
+            <button onclick="toggleFullscreen()" class="btn-icon" id="fullscreenBtn" title="Fullscreen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Editor Panel -->
+    <div id="editorPanel" class="tab-panel hidden">
+      <div class="grid lg:grid-cols-[280px_1fr] gap-6">
+        <div class="panel p-4 h-fit lg:sticky lg:top-24">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Scenes</h3>
+            <button onclick="addScene()" class="btn-ghost" id="addSceneBtn" title="Add Scene">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </button>
+          </div>
+          <div id="sceneList" class="space-y-1 max-h-[50vh] overflow-y-auto">
+            <p class="text-[var(--fg-muted)] text-sm py-4 text-center">No scenes yet</p>
+          </div>
+          <div class="mt-4 pt-4 border-t border-[var(--border)]">
+            <button onclick="toggleLock()" id="lockBtn" class="btn-secondary w-full text-sm">Lock Project</button>
+          </div>
+        </div>
+
+        <div class="panel p-6" id="sceneEditorPanel">
+          <div id="noSceneSelected" class="text-center py-12">
+            <svg class="mx-auto mb-4 text-[var(--fg-muted)]" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <p class="text-[var(--fg-muted)]">Select a scene to edit. Changes save automatically.</p>
+          </div>
+
+          <div id="sceneEditor" class="hidden">
+            <!-- Auto-saving indicator -->
+            <div class="flex items-center justify-end gap-2 mb-4 text-xs text-[var(--fg-muted)]">
+                <span id="saveIndicator">Saved</span>
+            </div>
+
+            <!-- NEW: Scene Identity & Flow -->
+            <div class="grid md:grid-cols-2 gap-4 mb-4 p-3 bg-[var(--bg)] rounded-lg border border-[var(--border)]">
+                <div>
+                    <label class="label-sm">Scene Name (ID)</label>
+                    <input type="text" id="editSceneName" class="input-field" placeholder="e.g., intro_park" oninput="debounceAutoSave()">
+                </div>
+                <div>
+                    <label class="label-sm">Next Scene (Flow)</label>
+                    <select id="editNextScene" class="input-field" onchange="autoSaveScene()">
+                        <option value="">-- Linear (Next in List) --</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Existing: Background & Audio -->
+            <div class="grid md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label class="label-sm">Background</label>
+                <select id="editBg" class="input-field" onchange="autoSaveScene()">
+                  <option value="">-- None --</option>
+                </select>
+              </div>
+              <div>
+                <label class="label-sm">BGM</label>
+                <select id="editBgm" class="input-field" onchange="autoSaveScene()">
+                  <option value="">-- None --</option>
+                </select>
+              </div>
+              <div>
+                <label class="label-sm">Sound Effect</label>
+                <select id="editSfx" class="input-field" onchange="autoSaveScene()">
+                  <option value="">-- NONE --</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Existing: Speaker & Dialogue -->
+            <div class="grid md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label class="label-sm">Speaker</label>
+                <select id="editSpeaker" class="input-field" onchange="autoSaveScene()">
+                  <option value="">-- Narrator --</option>
+                </select>
+              </div>
+              <div class="md:col-span-3">
+                <label class="label-sm">Dialogue</label>
+                <input type="text" id="editText" class="input-field" placeholder="What happens?" oninput="debounceAutoSave()">
+              </div>
+            </div>
+
+            <!-- Existing: Characters & Choices (Remain the same) -->
+            <div class="mb-4">
+              <div class="flex items-center justify-between mb-2">
+                <label class="label-sm mb-0">Characters on Stage</label>
+                <button onclick="addCharacterToScene()" class="btn-ghost text-sm" id="addCharBtn">Add</button>
+              </div>
+              <div id="sceneCharacters"><p class="text-[var(--fg-muted)] text-sm">No characters</p></div>
+            </div>
+
+            <div class="mb-4">
+              <div class="flex items-center justify-between mb-2">
+                <label class="label-sm mb-0">Choices (Branching)</label>
+                <button onclick="addChoice()" class="btn-ghost text-sm" id="addChoiceBtn">Add Choice</button>
+              </div>
+              <div id="sceneChoices"><p class="text-[var(--fg-muted)] text-sm">No choices - linear progression</p></div>
+            </div>
+
+            <!-- Existing: Preview -->
+            <div class="mb-4">
+              <label class="label-sm">Preview</label>
+              <div class="aspect-video bg-[var(--bg-card)] rounded-lg overflow-hidden relative border border-[var(--border)]">
+                <div id="previewBg" class="absolute inset-0 bg-cover bg-center"></div>
+                <div id="previewSprites" class="absolute inset-0"></div>
+                <div class="absolute bottom-0 left-0 right-0 bg-black/70 p-2">
+                  <div class="text-xs font-medium" id="previewSpeaker" style="color: var(--accent)">-</div>
+                  <div class="text-xs text-white/80 truncate" id="previewText">-</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-between">
+              <div class="flex gap-2">
+                <button onclick="duplicateCurrentScene()" class="btn-secondary">Duplicate</button>
+                <button onclick="deleteCurrentScene()" class="btn-ghost text-[var(--error)]">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Characters Panel -->
+    <div id="charactersPanel" class="tab-panel hidden">
+      <div class="grid lg:grid-cols-[1fr_1fr] gap-6">
+        <div class="panel p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Characters</h3>
+            <button onclick="createCharacter()" class="btn-secondary text-sm" id="createCharBtn">New</button>
+          </div>
+          <div id="characterList" class="space-y-3 max-h-[60vh] overflow-y-auto">
+            <p class="text-[var(--fg-muted)] text-sm text-center py-8">No characters</p>
+          </div>
+        </div>
+
+        <div class="panel p-6" id="characterEditorPanel">
+          <div id="noCharSelected" class="text-center py-12">
+            <svg class="mx-auto mb-4 text-[var(--fg-muted)]" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <p class="text-[var(--fg-muted)]">Select a character</p>
+          </div>
+
+          <div id="characterEditor" class="hidden stagger-children">
+            <div class="flex items-center gap-4 mb-6">
+              <input type="text" id="charName" class="input-field flex-1" placeholder="Name" oninput="debounceCharacterSave()">
+              <input type="color" id="charColor" value="#ff6b4a" class="w-12 h-10 rounded cursor-pointer" onchange="autoSaveCharacter()">
+            </div>
+            <div class="mb-6">
+              <div class="flex items-center justify-between mb-2">
+                <label class="label-sm mb-0">Expressions</label>
+                <button onclick="addExpression()" class="btn-ghost text-sm">Add</button>
+              </div>
+              <div id="expressionList" class="space-y-2 max-h-[300px] overflow-y-auto">
+                <p class="text-[var(--fg-muted)] text-sm">No expressions</p>
+              </div>
+            </div>
+            <div class="flex justify-end gap-3">
+              <button onclick="deleteCurrentCharacter()" class="btn-ghost text-[var(--error)]">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assets Panel -->
+    <div id="assetsPanel" class="tab-panel hidden">
+      <div class="panel p-6 mb-6">
+        <h3 class="font-semibold mb-4">Upload Images</h3>
+        <div class="drop-zone" id="dropZone">
+          <svg class="mx-auto mb-3 text-[var(--fg-muted)]" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <p class="text-[var(--fg-muted)]">Drop images here or click</p>
+          <input type="file" id="fileInput" class="hidden" accept="image/*" multiple>
+        </div>
+      </div>
+      <div class="panel p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold">Image Library</h3>
+          <span class="text-sm text-[var(--fg-muted)]" id="assetCount">0 assets</span>
+        </div>
+        <div id="assetGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <p class="text-[var(--fg-muted)] text-sm col-span-full text-center py-8">No assets</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audio Panel -->
+    <div id="audioPanel" class="tab-panel hidden">
+      <div class="grid lg:grid-cols-2 gap-6">
+        <div class="panel p-6">
+          <h3 class="font-semibold mb-4">Upload Audio</h3>
+          <div class="drop-zone" id="audioDropZone">
+            <svg class="mx-auto mb-3 text-[var(--fg-muted)]" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+            </svg>
+            <p class="text-[var(--fg-muted)]">Drop audio files here</p>
+            <input type="file" id="audioInput" class="hidden" accept="audio/*" multiple>
+          </div>
+        </div>
+
+        <div class="panel p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Audio Library</h3>
+            <span class="text-sm text-[var(--fg-muted)]" id="audioCount">0 files</span>
+          </div>
+          <div id="audioList" class="space-y-2 max-h-[400px] overflow-y-auto">
+            <p class="text-[var(--fg-muted)] text-sm text-center py-8">No audio files</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mods Panel -->
+    <div id="modsPanel" class="tab-panel hidden">
+      <div class="grid lg:grid-cols-[1fr_1fr] gap-6">
+        <div class="panel p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Installed Mods</h3>
+            <button onclick="createNewMod()" class="btn-secondary text-sm" id="createModBtn">New</button>
+          </div>
+          <div id="modList" class="space-y-3 max-h-[50vh] overflow-y-auto">
+            <p class="text-[var(--fg-muted)] text-sm text-center py-8">No mods</p>
+          </div>
+        </div>
+
+        <div class="panel p-6">
+          <div id="noModSelected" class="text-center py-12">
+            <p class="text-[var(--fg-muted)]">Select a mod</p>
+          </div>
+          <div id="modEditor" class="hidden">
+            <div class="flex items-center justify-between mb-4">
+              <input type="text" id="modName" class="input-field max-w-xs" placeholder="Name" oninput="debounceModSave()">
+              <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" id="modActive" class="w-4 h-4 accent-[var(--accent)]" onchange="autoSaveMod()">
+                Active
+              </label>
+            </div>
+            <textarea id="modCode" class="code-editor w-full" rows="10" placeholder="// Mod code" oninput="debounceModSave()"></textarea>
+            <div class="mt-4 flex justify-between">
+              <button onclick="deleteCurrentMod()" class="btn-ghost text-[var(--error)]">Delete</button>
+              <div class="flex gap-2">
+                <button onclick="testMod()" class="btn-secondary">Test</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settingsPanel" class="tab-panel hidden">
+      <div class="max-w-2xl mx-auto">
+        <div class="panel p-6 mb-6">
+          <h3 class="font-semibold mb-6">Audio Settings</h3>
+          <div class="space-y-6">
+            <div>
+              <div class="flex justify-between mb-2">
+                <label class="label-sm">Master Volume</label>
+                <span class="text-xs text-[var(--fg-muted)]" id="masterVolLabel">100%</span>
+              </div>
+              <input type="range" min="0" max="100" value="100" id="masterVolume" oninput="updateVolume('master', this.value)">
+            </div>
+            <div>
+              <div class="flex justify-between mb-2">
+                <label class="label-sm">BGM Volume</label>
+                <span class="text-xs text-[var(--fg-muted)]" id="bgmVolLabel">50%</span>
+              </div>
+              <input type="range" min="0" max="100" value="50" id="bgmVolume" oninput="updateVolume('bgm', this.value)">
+            </div>
+            <div>
+              <div class="flex justify-between mb-2">
+                <label class="label-sm">SFX Volume</label>
+                <span class="text-xs text-[var(--fg-muted)]" id="sfxVolLabel">70%</span>
+              </div>
+              <input type="range" min="0" max="100" value="70" id="sfxVolume" oninput="updateVolume('sfx', this.value)">
+            </div>
+          </div>
+        </div>
+
+        <div class="panel p-6">
+          <h3 class="font-semibold mb-6">Theme</h3>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <button class="theme-btn active" data-theme-val="dark" onclick="setTheme('dark')">
+                <div class="w-full h-8 rounded mb-2 bg-[#0a0a0f] border border-[#2a2a38]"></div>
+                <span class="text-sm font-medium">Dark</span>
+            </button>
+            <button class="theme-btn" data-theme-val="light" onclick="setTheme('light')">
+                <div class="w-full h-8 rounded mb-2 bg-[#f8f9fa] border border-[#dee2e6]"></div>
+                <span class="text-sm font-medium text-[#212529]">Light</span>
+            </button>
+            <button class="theme-btn" data-theme-val="muted" onclick="setTheme('muted')">
+                <div class="w-full h-8 rounded mb-2 bg-[#282828] border border-[#404040]"></div>
+                <span class="text-sm font-medium">Muted</span>
+            </button>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="toast">
+    <span id="toastIcon"></span>
+    <span id="toastMessage"></span>
+  </div>
+
+  <!-- Asset Modal -->
+  <div id="assetModal" class="modal-overlay" onclick="closeAssetModal(event)">
+    <div class="modal-content max-w-2xl" onclick="event.stopPropagation()">
+      <img id="modalImage" class="w-full rounded-lg mb-4" alt="Preview">
+      <div class="flex items-center justify-between">
+        <p class="font-medium" id="modalAssetName">-</p>
+        <button onclick="deleteAsset()" class="btn-ghost text-[var(--error)]">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expression Modal -->
+  <div id="expressionModal" class="modal-overlay" onclick="closeExpressionModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <h3 class="font-semibold mb-4">Add Expression</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="label-sm">Name</label>
+          <input type="text" id="exprName" class="input-field" placeholder="happy, sad, angry...">
+        </div>
+        <div>
+          <label class="label-sm">Sprite</label>
+          <select id="exprAsset" class="input-field"><option value="">-- Select --</option></select>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end gap-3">
+        <button onclick="closeExpressionModal()" class="btn-secondary">Cancel</button>
+        <button onclick="confirmAddExpression()" class="btn-primary">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save/Load Modal -->
+  <div id="saveLoadModal" class="modal-overlay" onclick="closeSaveLoadModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold" id="saveLoadTitle">Save Game</h3>
+        <button onclick="closeSaveLoadModal()" class="btn-ghost">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div id="saveLoadSlots" class="space-y-3"></div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // DATA
+    // ============================================
+    let vnData = {
+      locked: false,
+      assets: {},
+      audio: {},
+      characters: {},
+      scenes: [],
+      installedMods: [],
+      modData: {},
+      settings: { masterVolume: 100, bgmVolume: 50, sfxVolume: 70, theme: 'dark' }
+    };
+
+    let currentSceneIndex = -1;
+    let currentPlayIndex = 0;
+    let currentModIndex = -1;
+    let currentCharacterId = null;
+    let currentAssetId = null;
+    let isAutoMode = false;
+    let isSkipMode = false;
+    let autoTimer = null;
+    let skipTimer = null;
+    let dialogueHistory = [];
+    let typewriterTimeout = null;
+    let isTypewriting = false;
+    let currentBgAudio = null;
+    
+    // Debounce timers
+    let sceneSaveTimeout = null;
+    let charSaveTimeout = null;
+    let modSaveTimeout = null;
+
+    const TYPEWRITER_SPEED = 30;
+    const AUTO_DELAY = 2000;
+    const SKIP_DELAY = 100;
+    const SAVE_SLOTS = 5;
+
+    // ============================================
+    // INIT
+    // ============================================
+    function init() {
+      loadFromStorage();
+      loadSettings();
+      setupTabs();
+      setupDropZone();
+      setupAudioDropZone();
+      renderSceneList();
+      renderAssetGrid();
+      renderAudioList();
+      renderModList();
+      renderCharacterList();
+      updateLockUI();
+      updatePlayerStats();
+      runActiveMods();
+      applyTheme(vnData.settings.theme);
+      updateVolumeUI();
+    }
+
+    function loadFromStorage() {
+      try {
+        const saved = localStorage.getItem('spagvn_project');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          vnData = { ...vnData, ...parsed };
+          if (!vnData.characters) vnData.characters = {};
+          if (!vnData.audio) vnData.audio = {};
+          if (!vnData.settings) vnData.settings = { masterVolume: 100, bgmVolume: 50, sfxVolume: 70, theme: 'dark' };
+          migrateScenes();
+        }
+      } catch (e) {
+        console.error('Load error:', e);
+      }
+    }
+
+    function loadSettings() {
+        try {
+            const settings = localStorage.getItem('spagvn_settings');
+            if (settings) {
+                vnData.settings = {...vnData.settings, ...JSON.parse(settings)};
+            }
+        } catch (e) {
+            console.error("Settings load error", e);
+        }
+    }
+
+    function saveToStorage() {
+      try {
+        localStorage.setItem('spagvn_project', JSON.stringify(vnData));
+      } catch (e) {
+        showToast('Storage full', 'error');
+      }
+    }
+
+    function saveSettings() {
+        try {
+            localStorage.setItem('spagvn_settings', JSON.stringify(vnData.settings));
+        } catch (e) {
+            console.error("Settings save error", e);
+        }
+    }
+
+    function migrateScenes() {
+      vnData.scenes = vnData.scenes.map(scene => {
+        if (!scene.characters && scene.spriteId) {
+          return {
+            ...scene,
+            characters: [{ characterId: null, spriteId: scene.spriteId, position: 'center', customX: 50, customY: 0, rotation: 0 }],
+            choices: []
+          };
+        }
+        if (!scene.choices) scene.choices = [];
+        return scene;
+      });
+    }
+
+    // ============================================
+    // TABS
+    // ============================================
+    function setupTabs() {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+      });
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabId));
+      document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+      const panel = document.getElementById(tabId + 'Panel');
+      if (panel) {
+        panel.classList.remove('hidden');
+        panel.classList.add('animate-fade-in');
+      }
+    }
+
+    // ============================================
+    // PLAYER
+    // ============================================
+    window.renderPlayer = function(scene, skipAnimation = false) {
+      const bgEl = document.getElementById('playerBg');
+      const spritesLayer = document.getElementById('spritesLayer');
+      const speakerEl = document.getElementById('speakerName');
+      const textEl = document.getElementById('dialogueText');
+      const choicesContainer = document.getElementById('choicesContainer');
+
+      clearTimers();
+
+      if (!scene) {
+        bgEl.style.backgroundImage = '';
+        spritesLayer.innerHTML = '';
+        speakerEl.textContent = '-';
+        textEl.textContent = 'No scenes yet';
+        choicesContainer.style.display = 'none';
+        return;
+      }
+
+      // Background (Instant change)
+      const bg = vnData.assets[scene.bgId];
+      if (bg) {
+        bgEl.style.backgroundImage = `url(${bg.base64})`;
+      } else {
+        bgEl.style.backgroundImage = '';
+      }
+
+      if (scene.bgmId && vnData.audio[scene.bgmId]) playBgm(scene.bgmId);
+      if (scene.sfxId && vnData.audio[scene.sfxId]) playSfx(scene.sfxId);
+
+      spritesLayer.innerHTML = '';
+      if (scene.characters && scene.characters.length > 0) {
+        scene.characters.forEach(char => {
+          let spriteId = char.spriteId;
+          if (!spriteId && char.characterId && vnData.characters[char.characterId]) {
+            const charData = vnData.characters[char.characterId];
+            if (charData.expressions) spriteId = charData.expressions.default || Object.values(charData.expressions)[0];
+          }
+          const sprite = spriteId ? vnData.assets[spriteId] : null;
+          if (sprite) {
+            const img = document.createElement('img');
+            img.src = sprite.base64;
+            img.className = 'player-sprite' + (skipAnimation ? '' : ' entering');
+            img.alt = 'Character';
+            let xPercent = 50;
+            if (char.position === 'left') xPercent = 25;
+            else if (char.position === 'right') xPercent = 75;
+            else if (char.position === 'custom') xPercent = Math.max(0, Math.min(100, char.customX || 50));
+            img.style.left = `${xPercent}%`;
+            img.style.transform = `translateX(-50%) rotate(${char.rotation || 0}deg)`;
+            spritesLayer.appendChild(img);
+          }
+        });
+      }
+
+      let speakerName = 'Narrator';
+      let speakerColor = 'var(--accent)';
+      if (scene.speakerId && vnData.characters[scene.speakerId]) {
+        const char = vnData.characters[scene.speakerId];
+        speakerName = char.name;
+        speakerColor = char.color || 'var(--accent)';
+      }
+      speakerEl.textContent = speakerName;
+      speakerEl.style.color = speakerColor;
+
+      const fullText = scene.text || '';
+      if (skipAnimation || isSkipMode) {
+        textEl.textContent = fullText;
+        afterDialogue(scene);
+      } else {
+        typewriter(textEl, fullText, () => afterDialogue(scene));
+      }
+
+      updatePlayerStats();
+    };
+
+    function typewriter(el, text, callback) {
+      isTypewriting = true;
+      el.textContent = '';
+      let i = 0;
+      function type() {
+        if (i < text.length) {
+          el.textContent += text.charAt(i);
+          i++;
+          typewriterTimeout = setTimeout(type, TYPEWRITER_SPEED);
+        } else {
+          isTypewriting = false;
+          if (callback) callback();
+        }
+      }
+      type();
+    }
+
+    function afterDialogue(scene) {
+      if (scene.choices && scene.choices.length > 0) showChoices(scene.choices);
+      else if (isAutoMode) autoTimer = setTimeout(nextScene, AUTO_DELAY);
+      else if (isSkipMode) skipTimer = setTimeout(nextScene, SKIP_DELAY);
+    }
+
+    function showChoices(choices) {
+      const container = document.getElementById('choicesContainer');
+      container.innerHTML = '';
+      container.style.display = 'flex';
+      choices.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = choice.text;
+        btn.onclick = () => selectChoice(choice);
+        container.appendChild(btn);
+      });
+    }
+
+    function selectChoice(choice) {
+      document.getElementById('choicesContainer').style.display = 'none';
+      if (choice.targetScene !== undefined && choice.targetScene !== null) {
+        currentPlayIndex = vnData.scenes.findIndex(s => s.id === choice.targetScene);
+        if (currentPlayIndex === -1) currentPlayIndex = Math.min(choice.targetScene, vnData.scenes.length - 1);
+      } else {
+        currentPlayIndex++;
+      }
+      if (currentPlayIndex < vnData.scenes.length) {
+        const scene = vnData.scenes[currentPlayIndex];
+        addToHistory(scene);
+        renderPlayer(scene);
+      } else {
+        showToast('End of story!', 'success');
+        currentPlayIndex = vnData.scenes.length - 1;
+      }
+    }
+
+        function nextScene() {
+      if (isTypewriting) {
+        clearTimeout(typewriterTimeout);
+        isTypewriting = false;
+        const scene = vnData.scenes[currentPlayIndex];
+        document.getElementById('dialogueText').textContent = scene ? (scene.text || '') : '';
+        afterDialogue(scene);
+        return;
+      }
+      if (vnData.scenes.length === 0) return;
+      
+      const currentScene = vnData.scenes[currentPlayIndex];
+      
+      // Check for choices first
+      if (currentScene && currentScene.choices && currentScene.choices.length > 0) return;
+
+      // NEW: Check for specific Next Scene ID
+      let nextIndex = -1;
+      if (currentScene && currentScene.nextSceneId) {
+          nextIndex = vnData.scenes.findIndex(s => s.id === currentScene.nextSceneId);
+      }
+
+      // Fallback to Linear Progression
+      if (nextIndex === -1) {
+          nextIndex = currentPlayIndex + 1;
+      }
+
+      if (nextIndex >= vnData.scenes.length) {
+        showToast('End of story!', 'success');
+        currentPlayIndex = vnData.scenes.length - 1; // Stay at last scene
+        return;
+      }
+
+      currentPlayIndex = nextIndex;
+      const scene = vnData.scenes[currentPlayIndex];
+      addToHistory(scene);
+      renderPlayer(scene);
+    }
+
+    function restartStory() {
+      clearTimers();
+      currentPlayIndex = 0;
+      dialogueHistory = [];
+      if (vnData.scenes.length > 0) {
+        addToHistory(vnData.scenes[0]);
+        renderPlayer(vnData.scenes[0], true);
+      } else renderPlayer(null);
+    }
+
+    function clearTimers() {
+      clearTimeout(typewriterTimeout);
+      clearTimeout(autoTimer);
+      clearTimeout(skipTimer);
+    }
+
+    function updatePlayerStats() {
+      document.getElementById('currentSceneNum').textContent = vnData.scenes.length > 0 ? currentPlayIndex + 1 : 0;
+      document.getElementById('totalScenes').textContent = vnData.scenes.length;
+    }
+
+    function toggleAuto() {
+      isAutoMode = !isAutoMode;
+      isSkipMode = false;
+      document.getElementById('autoBtn').classList.toggle('active', isAutoMode);
+      document.getElementById('skipBtn').classList.remove('active');
+      if (isAutoMode && !isTypewriting) {
+        const scene = vnData.scenes[currentPlayIndex];
+        if (scene && (!scene.choices || scene.choices.length === 0)) autoTimer = setTimeout(nextScene, AUTO_DELAY);
+      }
+    }
+
+    function toggleSkip() {
+      isSkipMode = !isSkipMode;
+      isAutoMode = false;
+      document.getElementById('skipBtn').classList.toggle('active', isSkipMode);
+      document.getElementById('autoBtn').classList.remove('active');
+      if (isSkipMode && !isTypewriting) {
+        const scene = vnData.scenes[currentPlayIndex];
+        if (scene && (!scene.choices || scene.choices.length === 0)) skipTimer = setTimeout(nextScene, SKIP_DELAY);
+      }
+    }
+
+    function toggleHistory() { document.getElementById('historyPanel').classList.toggle('open'); }
+
+    function addToHistory(scene) {
+      if (!scene) return;
+      const speaker = scene.speakerId && vnData.characters[scene.speakerId] ? vnData.characters[scene.speakerId].name : 'Narrator';
+      dialogueHistory.push({ speaker, text: scene.text || '', color: vnData.characters[scene.speakerId]?.color || 'var(--accent)' });
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const content = document.getElementById('historyContent');
+      if (dialogueHistory.length === 0) {
+        content.innerHTML = '<p class="text-[var(--fg-muted)] text-sm text-center py-8">No history</p>';
+        return;
+      }
+      content.innerHTML = dialogueHistory.map(h => `
+        <div class="history-item">
+          <div class="font-medium text-sm mb-1" style="color: ${h.color}">${h.speaker}</div>
+          <div class="text-sm text-[var(--fg-muted)]">${h.text}</div>
+        </div>
+      `).join('');
+    }
+
+    function toggleFullscreen() {
+      const container = document.getElementById('playerContainer');
+      if (!document.fullscreenElement) container.requestFullscreen().catch(() => showToast('Fullscreen unavailable', 'error'));
+      else document.exitFullscreen();
+    }
+
+    // ============================================
+    // AUDIO
+    // ============================================
+    function setupAudioDropZone() {
+      const dropZone = document.getElementById('audioDropZone');
+      const input = document.getElementById('audioInput');
+      dropZone.addEventListener('click', () => input.click());
+      dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+      dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+      dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); handleAudioFiles(e.dataTransfer.files); });
+      input.addEventListener('change', e => { handleAudioFiles(e.target.files); input.value = ''; });
+    }
+
+    function handleAudioFiles(files) {
+      if (vnData.locked) { showToast('Project locked', 'error'); return; }
+      Array.from(files).forEach(file => {
+        if (!file.type.startsWith('audio/')) { showToast('Audio files only', 'error'); return; }
+        const reader = new FileReader();
+        reader.onload = e => {
+          const id = 'audio_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          vnData.audio[id] = { name: file.name, base64: e.target.result };
+          saveToStorage();
+          renderAudioList();
+          showToast(`Added ${file.name}`, 'success');
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderAudioList() {
+      const list = document.getElementById('audioList');
+      const audio = Object.entries(vnData.audio);
+      document.getElementById('audioCount').textContent = `${audio.length} file${audio.length !== 1 ? 's' : ''}`;
+      if (audio.length === 0) {
+        list.innerHTML = '<p class="text-[var(--fg-muted)] text-sm text-center py-8">No audio</p>';
+        return;
+      }
+      list.innerHTML = audio.map(([id, a]) => `
+        <div class="flex items-center gap-3 p-3 bg-[var(--bg-card)] rounded-lg border border-[var(--border)]">
+          <button onclick="previewAudio('${id}')" class="btn-icon shrink-0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </button>
+          <span class="flex-1 text-sm truncate">${a.name}</span>
+          <button onclick="deleteAudio('${id}')" class="btn-ghost text-[var(--error)] shrink-0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function previewAudio(id) {
+      const audio = vnData.audio[id];
+      if (!audio) return;
+      if (currentBgAudio) { currentBgAudio.pause(); }
+      currentBgAudio = new Audio(audio.base64);
+      currentBgAudio.volume = (vnData.settings.bgmVolume / 100) * (vnData.settings.masterVolume / 100);
+      currentBgAudio.play();
+    }
+
+    function playBgm(id) {
+      const audio = vnData.audio[id];
+      if (!audio) return;
+      if (currentBgAudio) { currentBgAudio.pause(); }
+      currentBgAudio = new Audio(audio.base64);
+      currentBgAudio.loop = true;
+      currentBgAudio.volume = (vnData.settings.bgmVolume / 100) * (vnData.settings.masterVolume / 100);
+      currentBgAudio.play();
+    }
+
+    function playSfx(id) {
+      const audio = vnData.audio[id];
+      if (!audio) return;
+      const sfx = new Audio(audio.base64);
+      sfx.volume = (vnData.settings.sfxVolume / 100) * (vnData.settings.masterVolume / 100);
+      sfx.play();
+    }
+
+    function deleteAudio(id) {
+      if (vnData.locked) { showToast('Project locked', 'error'); return; }
+      delete vnData.audio[id];
+      vnData.scenes.forEach(s => {
+        if (s.bgmId === id) s.bgmId = '';
+        if (s.sfxId === id) s.sfxId = '';
+      });
+      saveToStorage();
+      renderAudioList();
+      showToast('Audio deleted', 'success');
+    }
+
+    // ============================================
+    // SETTINGS & VOLUME
+    // ============================================
+    function updateVolume(type, val) {
+        vnData.settings[type + 'Volume'] = parseInt(val);
+        updateVolumeUI();
+        saveSettings();
+        
+        // Update current audio if playing
+        if (currentBgAudio) {
+            currentBgAudio.volume = (vnData.settings.bgmVolume / 100) * (vnData.settings.masterVolume / 100);
+        }
+    }
+
+    function updateVolumeUI() {
+        ['master', 'bgm', 'sfx'].forEach(type => {
+            const el = document.getElementById(type + 'Volume');
+            const label = document.getElementById(type + 'VolLabel');
+            if(el) el.value = vnData.settings[type + 'Volume'];
+            if(label) label.textContent = vnData.settings[type + 'Volume'] + '%';
+        });
+    }
+
+    function setTheme(themeName) {
+        vnData.settings.theme = themeName;
+        applyTheme(themeName);
+        saveSettings();
+        
+        // Update buttons
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.themeVal === themeName);
+        });
+    }
+
+    function applyTheme(themeName) {
+        if (themeName === 'dark') document.body.removeAttribute('data-theme');
+        else document.body.setAttribute('data-theme', themeName);
+    }
+
+    // ============================================
+    // SAVE / LOAD GAME STATE
+    // ============================================
+    function showSaveModal() {
+      document.getElementById('saveLoadTitle').textContent = 'Save Game';
+      renderSaveSlots('save');
+      document.getElementById('saveLoadModal').classList.add('show');
+    }
+
+    function showLoadModal() {
+      document.getElementById('saveLoadTitle').textContent = 'Load Game';
+      renderSaveSlots('load');
+      document.getElementById('saveLoadModal').classList.add('show');
+    }
+
+    function closeSaveLoadModal(e) {
+      if (e && e.target !== e.currentTarget) return;
+      document.getElementById('saveLoadModal').classList.remove('show');
+    }
+
+    function renderSaveSlots(mode) {
+      const container = document.getElementById('saveLoadSlots');
+      let html = '';
+      for (let i = 0; i < SAVE_SLOTS; i++) {
+        const saveKey = `spagvn_save_${i}`;
+        const saveData = localStorage.getItem(saveKey);
+        const hasData = !!saveData;
+        let preview = 'Empty Slot';
+        let time = '';
+        if (hasData) {
+          try {
+            const data = JSON.parse(saveData);
+            const scene = vnData.scenes[data.sceneIndex];
+            preview = scene ? `${scene.speakerId ? vnData.characters[scene.speakerId]?.name || 'Narrator' : 'Narrator'}: "${scene.text?.substring(0, 30) || '...'}"` : 'Scene ' + (data.sceneIndex + 1);
+            time = new Date(data.timestamp).toLocaleString();
+          } catch (e) { preview = 'Corrupted Save'; }
+        }
+
+        html += `
+          <div class="save-slot ${hasData ? '' : 'empty'}">
+            <div class="flex items-center justify-between">
+              <div class="flex-1 cursor-pointer" onclick="${mode}Slot(${i})">
+                <div class="font-medium">Slot ${i + 1}</div>
+                <div class="text-sm text-[var(--fg-muted)] truncate">${preview}</div>
+                ${time ? `<div class="text-xs text-[var(--fg-muted)]">${time}</div>` : ''}
+              </div>
+              ${hasData ? `
+                <button onclick="deleteSaveSlot(${i})" class="btn-ghost text-[var(--error)] shrink-0 ml-2" title="Delete Save">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    function saveSlot(index) {
+      const saveData = { sceneIndex: currentPlayIndex, timestamp: Date.now(), history: dialogueHistory };
+      localStorage.setItem(`spagvn_save_${index}`, JSON.stringify(saveData));
+      showToast('Game saved', 'success');
+      renderSaveSlots('save');
+    }
+
+    function loadSlot(index) {
+      const saveData = localStorage.getItem(`spagvn_save_${index}`);
+      if (!saveData) { showToast('Empty slot', 'error'); return; }
+      try {
+        const data = JSON.parse(saveData);
+        currentPlayIndex = data.sceneIndex || 0;
+        dialogueHistory = data.history || [];
+        if (vnData.scenes[currentPlayIndex]) {
+          renderPlayer(vnData.scenes[currentPlayIndex], true);
+          renderHistory();
+        }
+        showToast('Game loaded', 'success');
+        closeSaveLoadModal();
+      } catch (e) { showToast('Failed to load', 'error'); }
+    }
+
+    function deleteSaveSlot(index) {
+        localStorage.removeItem(`spagvn_save_${index}`);
+        showToast('Save deleted', 'success');
+        renderSaveSlots('save'); // Re-render to update UI
+    }
+
+    // ============================================
+    // SCENE EDITOR
+    // ============================================
+    function addScene() {
+      if (vnData.locked) { showToast('Project locked', 'error'); return; }
+      vnData.scenes.push({
+        id: 'scene_' + Date.now(),
+        name: '', // NEW
+        nextSceneId: '', // NEW
+        bgId: '', speakerId: '', text: '', bgmId: '', sfxId: '',
+        characters: [], choices: []
+      });
+      saveToStorage();
+      renderSceneList();
+      selectScene(vnData.scenes.length - 1);
+    }
+
+    function duplicateCurrentScene() {
+      if (vnData.locked || currentSceneIndex < 0) { showToast('Select a scene first', 'error'); return; }
+      const original = vnData.scenes[currentSceneIndex];
+      const duplicate = JSON.parse(JSON.stringify(original));
+      duplicate.id = 'scene_' + Date.now();
+      duplicate.text = (original.text || '') + ' (copy)';
+      vnData.scenes.splice(currentSceneIndex + 1, 0, duplicate);
+      saveToStorage();
+      renderSceneList();
+      selectScene(currentSceneIndex + 1);
+      showToast('Scene duplicated', 'success');
+    }
+
+        function renderSceneList() {
+      const list = document.getElementById('sceneList');
+      if (vnData.scenes.length === 0) {
+        list.innerHTML = '<p class="text-[var(--fg-muted)] text-sm py-4 text-center">No scenes</p>';
+        return;
+      }
+      list.innerHTML = vnData.scenes.map((s, i) => {
+        const speaker = s.speakerId && vnData.characters[s.speakerId] ? vnData.characters[s.speakerId].name : 'Narrator';
+        const hasChoice = s.choices && s.choices.length > 0;
+        const displayName = s.name || `Scene ${i + 1}`; // NEW
+        
+        return `
+          <div class="scene-item ${i === currentSceneIndex ? 'active' : ''} ${hasChoice ? 'has-choice' : ''}" onclick="selectScene(${i})">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-[var(--fg-muted)] w-5">${i + 1}</span>
+              <div class="flex-1 min-w-0">
+                <div class="font-medium text-sm truncate">${displayName}</div>
+                <div class="text-xs text-[var(--fg-muted)] truncate">${s.text || 'Empty'}</div>
+              </div>
+              ${hasChoice ? '<span class="text-xs text-[var(--cyan)]">choice</span>' : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+      updatePlayerStats();
+    }
+
+    function selectScene(index) {
+      currentSceneIndex = index;
+      const scene = vnData.scenes[index];
+      if (!scene) return;
+
+      document.getElementById('noSceneSelected').classList.add('hidden');
+      document.getElementById('sceneEditor').classList.remove('hidden');
+
+      populateSceneDropdowns();
+      
+      // Load standard fields
+      document.getElementById('editSceneName').value = scene.name || ''; // NEW
+      document.getElementById('editBg').value = scene.bgId || '';
+      document.getElementById('editBgm').value = scene.bgmId || '';
+      document.getElementById('editSfx').value = scene.sfxId || '';
+      document.getElementById('editSpeaker').value = scene.speakerId || '';
+      document.getElementById('editText').value = scene.text || '';
+
+      // NEW: Populate and set Next Scene dropdown
+      populateNextSceneDropdown(index);
+      document.getElementById('editNextScene').value = scene.nextSceneId || '';
+
+      renderSceneCharacters();
+      renderSceneChoices();
+      updatePreview();
+      renderSceneList();
+      document.getElementById('saveIndicator').textContent = 'Saved';
+    }
+
+    function populateNextSceneDropdown(currentIndex) {
+        const select = document.getElementById('editNextScene');
+        select.innerHTML = '<option value="">-- Linear (Next in List) --</option>';
+        
+        vnData.scenes.forEach((s, i) => {
+            if (i === currentIndex) return; // Prevent linking to self
+            const name = s.name || `Scene ${i + 1}`;
+            select.innerHTML += `<option value="${s.id}">${name} (${s.id.substring(0, 8)}...)</option>`;
+        });
+    }
+
+    function populateSceneDropdowns() {
+      const assets = Object.entries(vnData.assets);
+      const audio = Object.entries(vnData.audio);
+      const chars = Object.entries(vnData.characters);
+      document.getElementById('editBg').innerHTML = '<option value="">-- None --</option>' + assets.map(([id, a]) => `<option value="${id}">${a.name}</option>`).join('');
+      document.getElementById('editBgm').innerHTML = '<option value="">-- None --</option>' + audio.map(([id, a]) => `<option value="${id}">${a.name}</option>`).join('');
+      document.getElementById('editSfx').innerHTML = '<option value="">-- None --</option>' + audio.map(([id, a]) => `<option value="${id}">${a.name}</option>`).join('');
+      document.getElementById('editSpeaker').innerHTML = '<option value="">-- Narrator --</option>' + chars.map(([id, c]) => `<option value="${id}">${c.name}</option>`).join('');
+    }
+
+    function renderSceneCharacters() {
+      const container = document.getElementById('sceneCharacters');
+      const scene = vnData.scenes[currentSceneIndex];
+      if (!scene || !scene.characters || scene.characters.length === 0) {
+        container.innerHTML = '<p class="text-[var(--fg-muted)] text-sm">No characters</p>';
+        return;
+      }
+      container.innerHTML = scene.characters.map((char, idx) => {
+        const charData = char.characterId ? vnData.characters[char.characterId] : null;
+        let exprOptions = '';
+        if (charData?.expressions) {
+          exprOptions = Object.entries(charData.expressions).map(([e, a]) => `<option value="${a}" ${char.spriteId === a ? 'selected' : ''}>${e}</option>`).join('');
+        }
+        const spriteOptions = Object.entries(vnData.assets).map(([id, a]) => `<option value="${id}" ${char.spriteId === id ? 'selected' : ''}>${a.name}</option>`).join('');
+        return `
+          <div class="char-instance-card ${char.characterId === vnData.scenes[currentSceneIndex].speakerId ? 'speaking' : ''}">
+            <div class="flex items-center justify-between mb-2">
+              <select class="input-field input-sm w-36" onchange="updateSceneCharacter(${idx}, 'characterId', this.value)">
+                <option value="">Custom</option>
+                ${Object.entries(vnData.characters).map(([id, c]) => `<option value="${id}" ${char.characterId === id ? 'selected' : ''}>${c.name}</option>`).join('')}
+              </select>
+              <button onclick="removeCharacterFromScene(${idx})" class="btn-ghost text-[var(--error)]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mb-2">
+              <div>
+                <label class="label-sm">Expression</label>
+                <select class="input-field input-sm" onchange="updateSceneCharacter(${idx}, 'spriteId', this.value)">
+                  ${char.characterId && exprOptions ? `<option value="">Select</option>${exprOptions}` : `<option value="">Select</option>${spriteOptions}`}
+                </select>
+              </div>
+              <div>
+                <label class="label-sm">Position</label>
+                <select class="input-field input-sm" onchange="updateSceneCharacter(${idx}, 'position', this.value)">
+                  <option value="center" ${char.position === 'center' ? 'selected' : ''}>Center</option>
+                  <option value="left" ${char.position === 'left' ? 'selected' : ''}>Left</option>
+                  <option value="right" ${char.position === 'right' ? 'selected' : ''}>Right</option>
+                  <option value="custom" ${char.position === 'custom' ? 'selected' : ''}>Custom</option>
+                </select>
+              </div>
+            </div>
+            ${char.position === 'custom' ? `
+              <div class="grid grid-cols-3 gap-2">
+                <div><label class="label-sm">X%</label><input type="number" class="input-field input-sm" value="${char.customX || 50}" min="0" max="100" onchange="updateSceneCharacter(${idx}, 'customX', +this.value)"></div>
+                <div><label class="label-sm">Ypx</label><input type="number" class="input-field input-sm" value="${char.customY || 0}" min="0" onchange="updateSceneCharacter(${idx}, 'customY', +this.value)"></div>
+                <div><label class="label-sm">Rotate</label><input type="number" class="input-field input-sm" value="${char.rotation || 0}" onchange="updateSceneCharacter(${idx}, 'rotation', +this.value)"></div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function addCharacterToScene() {
+      if (vnData.locked || currentSceneIndex < 0) return;
+      const scene = vnData.scenes[currentSceneIndex];
+      if (!scene.characters) scene.characters = [];
+      scene.characters.push({ characterId: '', spriteId: '', position: 'center', customX: 50, customY: 0, rotation: 0 });
+      autoSaveScene();
+      renderSceneCharacters();
+      updatePreview();
+    }
+
+    function updateSceneCharacter(idx, field, value) {
+      if (vnData.locked) return;
+      const scene = vnData.scenes[currentSceneIndex];
+      if (!scene?.characters?.[idx]) return;
+      scene.characters[idx][field] = value;
+      if (field === 'characterId' && value) {
+        const char = vnData.characters[value];
+        if (char?.expressions) {
+          const defaultExpr = char.expressions.default || Object.values(char.expressions)[0];
+          if (defaultExpr) scene.characters[idx].spriteId = defaultExpr;
+        }
+      }
+      autoSaveScene();
+      renderSceneCharacters();
+      updatePreview();
+    }
+
+    function removeCharacterFromScene(idx) {
+      if (vnData.locked) return;
+      vnData.scenes[currentSceneIndex]?.characters?.splice(idx, 1);
+      autoSaveScene();
+      renderSceneCharacters();
+      updatePreview();
+    }
+
+    function renderSceneChoices() {
+      const container = document.getElementById('sceneChoices');
+      const scene = vnData.scenes[currentSceneIndex];
+      if (!scene?.choices?.length) {
+        container.innerHTML = '<p class="text-[var(--fg-muted)] text-sm">No choices - linear progression</p>';
+        return;
+      }
+      // Fixed Layout: Text on top row, controls on bottom row
+      container.innerHTML = scene.choices.map((choice, idx) => `
+        <div class="p-2 border border-[var(--border)] rounded-lg mb-2 bg-[var(--bg)]">
+            <input type="text" class="input-field input-sm w-full mb-2" value="${choice.text || ''}" placeholder="Choice text" oninput="updateChoiceText(${idx}, this.value)">
+            <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-[var(--fg-muted)]">Goto:</span>
+                    <select class="input-field input-sm py-1 px-2 text-xs flex-1" onchange="updateChoiceTarget(${idx}, this.value)">
+                        <option value="">Next Scene</option>
+                        ${vnData.scenes.map((s, i) => `<option value="${i}" ${choice.targetScene === i ? 'selected' : ''}>Scene ${i + 1}</option>`).join('')}
+                    </select>
+                </div>
+                <button onclick="removeChoice(${idx})" class="btn-ghost text-[var(--error)] p-1">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+        </div>
+      `).join('');
+    }
+
+    function addChoice() {
+      if (vnData.locked || currentSceneIndex < 0) return;
+      const scene = vnData.scenes[currentSceneIndex];
+      if (!scene.choices) scene.choices = [];
+      scene.choices.push({ text: '', targetScene: null });
+      autoSaveScene();
+      renderSceneChoices();
+      renderSceneList();
+    }
+
+    function updateChoiceText(idx, value) {
+        if (vnData.locked) return;
+        const scene = vnData.scenes[currentSceneIndex];
+        if (!scene?.choices?.[idx]) return;
+        scene.choices[idx].text = value;
+        debounceAutoSave();
+    }
+    
+    function updateChoiceTarget(idx, value) {
+        if (vnData.locked) return;
+        const scene = vnData.scenes[currentSceneIndex];
+        if (!scene?.choices?.[idx]) return;
+        scene.choices[idx].targetScene = value ? parseInt(value) : null;
+        autoSaveScene();
+    }
+
+    function removeChoice(idx) {
+      if (vnData.locked) return;
+      vnData.scenes[currentSceneIndex]?.choices?.splice(idx, 1);
+      autoSaveScene();
+      renderSceneChoices();
+      renderSceneList();
+    }
+
+    function updatePreview() {
+      const scene = vnData.scenes[currentSceneIndex];
+      if (!scene) return;
+      const bg = vnData.assets[document.getElementById('editBg').value];
+      document.getElementById('previewBg').style.backgroundImage = bg ? `url(${bg.base64})` : '';
+      const spritesContainer = document.getElementById('previewSprites');
+      spritesContainer.innerHTML = '';
+      scene.characters?.forEach(char => {
+        let spriteId = char.spriteId;
+        if (!spriteId && char.characterId && vnData.characters[char.characterId]) {
+          const charData = vnData.characters[char.characterId];
+          if (charData.expressions) spriteId = charData.expressions.default || Object.values(charData.expressions)[0];
+        }
+        const sprite = spriteId ? vnData.assets[spriteId] : null;
+        if (sprite) {
+          const img = document.createElement('img');
+          img.src = sprite.base64;
+          img.className = 'absolute max-h-[85%] max-w-[35%] object-contain';
+          img.style.bottom = '0';
+          let x = 50;
+          if (char.position === 'left') x = 25;
+          else if (char.position === 'right') x = 75;
+          else if (char.position === 'custom') x = Math.max(0, Math.min(100, char.customX || 50));
+          img.style.left = `${x}%`;
+          img.style.transform = `translateX(-50%) rotate(${char.rotation || 0}deg)`;
+          spritesContainer.appendChild(img);
+        }
+      });
+      const speakerId = document.getElementById('editSpeaker').value;
+      const char = vnData.characters[speakerId];
+      const previewSpeaker = document.getElementById('previewSpeaker');
+      previewSpeaker.textContent = char ? char.name : 'Narrator';
+      previewSpeaker.style.color = char?.color || 'var(--accent)';
+      document.getElementById('previewText').textContent = document.getElementById('editText').value || '-';
+    }
+
+    function autoSaveScene() {
+        if (currentSceneIndex < 0) return;
+        vnData.scenes[currentSceneIndex] = {
+            ...vnData.scenes[currentSceneIndex],
+            name: document.getElementById('editSceneName').value, // NEW
+            nextSceneId: document.getElementById('editNextScene').value, // NEW
+            bgId: document.getElementById('editBg').value,
+            bgmId: document.getElementById('editBgm').value,
+            sfxId: document.getElementById('editSfx').value,
+            speakerId: document.getElementById('editSpeaker').value,
+            text: document.getElementById('editText').value
+        };
+        saveToStorage();
+        renderSceneList(); // Update list in case name changed
+        updatePreview();
+        document.getElementById('saveIndicator').textContent = 'Saved';
+    }
+
+    function debounceAutoSave() {
+        document.getElementById('saveIndicator').textContent = 'Saving...';
+        clearTimeout(sceneSaveTimeout);
+        sceneSaveTimeout = setTimeout(() => {
+            autoSaveScene();
+        }, 600);
+    }
+
+    function deleteCurrentScene() {
+      if (vnData.locked || currentSceneIndex < 0) return;
+      vnData.scenes.splice(currentSceneIndex, 1);
+      currentSceneIndex = -1;
+      document.getElementById('noSceneSelected').classList.remove('hidden');
+      document.getElementById('sceneEditor').classList.add('hidden');
+      saveToStorage();
+      renderSceneList();
+      showToast('Scene deleted', 'success');
+    }
+
+    // ============================================
+    // CHARACTERS
+    // ============================================
+    function createCharacter() {
+      if (vnData.locked) return;
+      const id = 'char_' + Date.now();
+      vnData.characters[id] = { name: 'New Character', color: '#ff6b4a', expressions: {} };
+      currentCharacterId = id;
+      saveToStorage();
+      renderCharacterList();
+      selectCharacter(id);
+    }
+
+    function renderCharacterList() {
+      const list = document.getElementById('characterList');
+      const chars = Object.entries(vnData.characters);
+      if (!chars.length) {
+        list.innerHTML = '<p class="text-[var(--fg-muted)] text-sm text-center py-8">No characters</p>';
+        return;
+      }
+      list.innerHTML = chars.map(([id, c]) => `
+        <div class="character-card ${id === currentCharacterId ? 'active' : ''}" onclick="selectCharacter('${id}')">
+          <div class="flex items-center gap-3">
+            <div class="w-3 h-3 rounded-full" style="background: ${c.color || 'var(--accent)'}"></div>
+            <div class="flex-1">
+              <div class="font-medium text-sm">${c.name}</div>
+              <div class="text-xs text-[var(--fg-muted)]">${Object.keys(c.expressions || {}).length} expr</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function selectCharacter(id) {
+      currentCharacterId = id;
+      const char = vnData.characters[id];
+      if (!char) return;
+      document.getElementById('noCharSelected').classList.add('hidden');
+      document.getElementById('characterEditor').classList.remove('hidden');
+      document.getElementById('charName').value = char.name || '';
+      document.getElementById('charColor').value = char.color || '#ff6b4a';
+      renderExpressionList();
+      renderCharacterList();
+    }
+
+    function renderExpressionList() {
+      const container = document.getElementById('expressionList');
+      const char = vnData.characters[currentCharacterId];
+      const exprs = Object.entries(char?.expressions || {});
+      if (!exprs.length) {
+        container.innerHTML = '<p class="text-[var(--fg-muted)] text-sm">No expressions</p>';
+        return;
+      }
+      container.innerHTML = exprs.map(([name, assetId]) => {
+        const asset = vnData.assets[assetId];
+        return `
+          <div class="flex items-center gap-2 p-2 bg-[var(--bg)] rounded">
+            ${asset ? `<img src="${asset.base64}" class="w-8 h-8 object-cover rounded">` : '<div class="w-8 h-8 bg-[var(--border)] rounded"></div>'}
+            <span class="flex-1 text-sm">${name}</span>
+            <button onclick="removeExpression('${name}')" class="btn-ghost text-[var(--error)]">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function addExpression() {
+      document.getElementById('exprAsset').innerHTML = '<option value="">Select</option>' + Object.entries(vnData.assets).map(([id, a]) => `<option value="${id}">${a.name}</option>`).join('');
+      document.getElementById('exprName').value = '';
+      document.getElementById('expressionModal').classList.add('show');
+    }
+
+    function closeExpressionModal(e) {
+      if (e && e.target !== e.currentTarget) return;
+      document.getElementById('expressionModal').classList.remove('show');
+    }
+
+    function confirmAddExpression() {
+      const name = document.getElementById('exprName').value.trim();
+      const assetId = document.getElementById('exprAsset').value;
+      if (!name || !assetId) { showToast('Fill all fields', 'error'); return; }
+      const char = vnData.characters[currentCharacterId];
+      if (!char.expressions) char.expressions = {};
+      char.expressions[name] = assetId;
+      saveToStorage();
+      renderExpressionList();
+      closeExpressionModal();
+      showToast('Expression added', 'success');
+    }
+
+    function removeExpression(name) {
+      if (vnData.locked) return;
+      delete vnData.characters[currentCharacterId]?.expressions?.[name];
+      autoSaveCharacter();
+      renderExpressionList();
+    }
+
+    function autoSaveCharacter() {
+        if (!currentCharacterId) return;
+        vnData.characters[currentCharacterId] = {
+            ...vnData.characters[currentCharacterId],
+            name: document.getElementById('charName').value,
+            color: document.getElementById('charColor').value
+        };
+        saveToStorage();
+        renderCharacterList();
+    }
+    
+    function debounceCharacterSave() {
+        clearTimeout(charSaveTimeout);
+        charSaveTimeout = setTimeout(autoSaveCharacter, 500);
+    }
+
+    function deleteCurrentCharacter() {
+      if (vnData.locked || !currentCharacterId) return;
+      delete vnData.characters[currentCharacterId];
+      currentCharacterId = null;
+      document.getElementById('noCharSelected').classList.remove('hidden');
+      document.getElementById('characterEditor').classList.add('hidden');
+      saveToStorage();
+      renderCharacterList();
+      showToast('Character deleted', 'success');
+    }
+
+    // ============================================
+    // ASSETS
+    // ============================================
+    function setupDropZone() {
+      const dropZone = document.getElementById('dropZone');
+      const input = document.getElementById('fileInput');
+      dropZone.addEventListener('click', () => input.click());
+      dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+      dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+      dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+      input.addEventListener('change', e => { handleFiles(e.target.files); input.value = ''; });
+    }
+
+    function handleFiles(files) {
+      if (vnData.locked) { showToast('Project locked', 'error'); return; }
+      Array.from(files).forEach(file => {
+        if (!file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+          const id = 'asset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          vnData.assets[id] = { name: file.name, base64: e.target.result };
+          saveToStorage();
+          renderAssetGrid();
+          showToast(`Added ${file.name}`, 'success');
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderAssetGrid() {
+      const grid = document.getElementById('assetGrid');
+      const assets = Object.entries(vnData.assets);
+      document.getElementById('assetCount').textContent = `${assets.length} asset${assets.length !== 1 ? 's' : ''}`;
+      if (!assets.length) {
+        grid.innerHTML = '<p class="text-[var(--fg-muted)] text-sm col-span-full text-center py-8">No assets</p>';
+        return;
+      }
+      grid.innerHTML = assets.map(([id, a]) => `
+        <div class="asset-card" onclick="openAssetModal('${id}')">
+          <img src="${a.base64}" alt="${a.name}">
+          <div class="p-2"><p class="text-xs truncate">${a.name}</p></div>
+        </div>
+      `).join('');
+    }
+
+    function openAssetModal(id) {
+      currentAssetId = id;
+      const asset = vnData.assets[id];
+      if (!asset) return;
+      document.getElementById('modalImage').src = asset.base64;
+      document.getElementById('modalAssetName').textContent = asset.name;
+      document.getElementById('assetModal').classList.add('show');
+    }
+
+    function closeAssetModal(e) {
+      if (e && e.target !== e.currentTarget) return;
+      document.getElementById('assetModal').classList.remove('show');
+      currentAssetId = null;
+    }
+
+    function deleteAsset() {
+      if (vnData.locked || !currentAssetId) return;
+      delete vnData.assets[currentAssetId];
+      Object.values(vnData.characters).forEach(c => {
+        Object.entries(c.expressions || {}).forEach(([e, a]) => { if (a === currentAssetId) delete c.expressions[e]; });
+      });
+      vnData.scenes.forEach(s => {
+        if (s.bgId === currentAssetId) s.bgId = '';
+        s.characters?.forEach(c => { if (c.spriteId === currentAssetId) c.spriteId = ''; });
+      });
+      saveToStorage();
+      renderAssetGrid();
+      closeAssetModal();
+      showToast('Asset deleted', 'success');
+    }
+
+    // ============================================
+    // MODS
+    // ============================================
+    function createNewMod() {
+      vnData.installedMods.push({ name: 'New Mod', code: '// code', active: false });
+      currentModIndex = vnData.installedMods.length - 1;
+      saveToStorage();
+      renderModList();
+      selectMod(currentModIndex);
+    }
+
+    function renderModList() {
+      const list = document.getElementById('modList');
+      if (!vnData.installedMods.length) {
+        list.innerHTML = '<p class="text-[var(--fg-muted)] text-sm text-center py-8">No mods</p>';
+        return;
+      }
+      list.innerHTML = vnData.installedMods.map((m, i) => `
+        <div class="mod-card ${m.active ? 'active-mod' : ''} ${i === currentModIndex ? 'ring-2 ring-[var(--accent)]' : ''}" onclick="selectMod(${i})">
+          <div class="flex items-center justify-between">
+            <span class="font-medium text-sm">${m.name}</span>
+            <span class="status-badge ${m.active ? 'unlocked' : ''}" style="${m.active ? '' : 'background: var(--bg); color: var(--fg-muted);'}">${m.active ? 'Active' : 'Off'}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function selectMod(i) {
+      currentModIndex = i;
+      const mod = vnData.installedMods[i];
+      if (!mod) return;
+      document.getElementById('noModSelected').classList.add('hidden');
+      document.getElementById('modEditor').classList.remove('hidden');
+      document.getElementById('modName').value = mod.name;
+      document.getElementById('modCode').value = mod.code;
+      document.getElementById('modActive').checked = mod.active;
+      renderModList();
+    }
+
+    function autoSaveMod() {
+        if (currentModIndex < 0) return;
+        vnData.installedMods[currentModIndex] = {
+            name: document.getElementById('modName').value,
+            code: document.getElementById('modCode').value,
+            active: document.getElementById('modActive').checked
+        };
+        saveToStorage();
+        renderModList();
+    }
+
+    function debounceModSave() {
+        clearTimeout(modSaveTimeout);
+        modSaveTimeout = setTimeout(autoSaveMod, 500);
+    }
+
+    function deleteCurrentMod() {
+      if (currentModIndex < 0) return;
+      vnData.installedMods.splice(currentModIndex, 1);
+      currentModIndex = -1;
+      document.getElementById('noModSelected').classList.remove('hidden');
+      document.getElementById('modEditor').classList.add('hidden');
+      saveToStorage();
+      renderModList();
+      showToast('Mod deleted', 'success');
+    }
+
+    function testMod() {
+      if (currentModIndex < 0) return;
+      try {
+        new Function('vnData', 'window', 'showToast', document.getElementById('modCode').value)(vnData, window, showToast);
+        showToast('Mod executed', 'success');
+      } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+      }
+    }
+
+    function runActiveMods() {
+      vnData.installedMods.forEach(m => {
+        if (m.active) {
+          try { new Function('vnData', 'window', 'showToast', m.code)(vnData, window, showToast); }
+          catch (e) { console.error('Mod error:', e); }
+        }
+      });
+    }
+
+    // ============================================
+    // MOD API HELPER
+    // ============================================
+    window.addModMenu = function(title, html) {
+        // Find the Editor sidebar
+        const sidebar = document.querySelector('#editorPanel .panel.h-fit');
+        if (!sidebar) {
+            console.warn('Mod Menu target sidebar not found.');
+            return;
+        }
+
+        // Create a unique ID for the menu
+        const menuId = 'mod-menu-' + title.toLowerCase().replace(/\s+/g, '-');
+        
+        // Remove existing menu if it exists (prevents duplicates on re-run)
+        const existing = document.getElementById(menuId);
+        if (existing) existing.remove();
+
+        // Create and append the new menu
+        const div = document.createElement('div');
+        div.id = menuId;
+        div.className = 'mt-4 pt-4 border-t border-[var(--border)]';
+        div.innerHTML = `
+            <h4 class="font-semibold text-sm mb-3">${title}</h4>
+            ${html}
+        `;
+        
+        sidebar.appendChild(div);
+    };
+
+    // ============================================
+    // LOCK / IMPORT / EXPORT
+    // ============================================
+    function toggleLock() {
+      vnData.locked = !vnData.locked;
+      saveToStorage();
+      updateLockUI();
+      showToast(vnData.locked ? 'Locked' : 'Unlocked', 'success');
+    }
+
+    function updateLockUI() {
+      const status = document.getElementById('lockStatus');
+      const btn = document.getElementById('lockBtn');
+      status.className = vnData.locked ? 'status-badge locked' : 'status-badge unlocked';
+      status.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> ${vnData.locked ? 'Locked' : 'Unlocked'}`;
+      btn.textContent = vnData.locked ? 'Unlock' : 'Lock Project';
+      btn.className = vnData.locked ? 'btn-primary w-full text-sm' : 'btn-secondary w-full text-sm';
+    }
+
+    function exportProject() {
+      const blob = new Blob([JSON.stringify(vnData, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'spagvn_project.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast('Exported', 'success');
+    }
+
+    function importProject() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          try {
+            const data = JSON.parse(ev.target.result);
+            vnData = { ...vnData, ...data };
+            if (!vnData.characters) vnData.characters = {};
+            if (!vnData.audio) vnData.audio = {};
+            if (!vnData.settings) vnData.settings = { masterVolume: 100, bgmVolume: 50, sfxVolume: 70, theme: 'dark' };
+            migrateScenes();
+            saveToStorage();
+            currentSceneIndex = -1; currentModIndex = -1; currentCharacterId = null; currentPlayIndex = 0;
+            renderSceneList(); renderAssetGrid(); renderAudioList(); renderModList(); renderCharacterList();
+            updateLockUI(); updatePlayerStats(); restartStory(); runActiveMods();
+            setTheme(vnData.settings.theme);
+            updateVolumeUI();
+            showToast('Imported', 'success');
+          } catch (e) { showToast('Invalid file', 'error'); }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    }
+
+    // ============================================
+    // TOAST
+    // ============================================
+    function showToast(msg, type = 'info') {
+      const icons = {
+        success: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+        error: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+        info: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+      };
+      document.getElementById('toastIcon').innerHTML = icons[type] || icons.info;
+      document.getElementById('toastMessage').textContent = msg;
+      document.getElementById('toast').classList.add('show');
+      setTimeout(() => document.getElementById('toast').classList.remove('show'), 3000);
+    }
+
+    // ============================================
+    // INIT
+    // ============================================
+    document.addEventListener('DOMContentLoaded', init);
+
+    document.addEventListener('keydown', e => {
+      if (document.getElementById('playerPanel').classList.contains('hidden')) return;
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); nextScene(); }
+      if (e.ctrlKey && e.key === 's') e.preventDefault(); // Disabled manual save
+    });
+  </script>
+</body>
+</html>
