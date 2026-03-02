@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Hexcross</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #000000;
+            --border: #000000;
+            --filled: #000000;
+            --empty: #ffffff;
+            --marked: #555555;
+            --hex-size: 22px;
+            --hex-w: 38px;
+            --hex-h: 44px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--bg);
+            color: var(--fg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            user-select: none;
+        }
+
+        h1 {
+            font-size: 1rem;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            font-weight: normal;
+        }
+
+        #date-display {
+            font-size: 0.75rem;
+            margin-bottom: 20px;
+            opacity: 0.6;
+            letter-spacing: 1px;
+        }
+
+        #game-container {
+            position: relative;
+            touch-action: none;
+            margin-top: 20px;
+        }
+
+        /* --- Hexagon Styling --- */
+        .hex-cell {
+            position: absolute;
+            width: var(--hex-w);
+            height: var(--hex-h);
+            background-color: var(--border);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            cursor: crosshair;
+            opacity: 0;
+            animation: hexAppear 0.4s ease forwards;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+        }
+        
+        .hex-cell:hover { z-index: 10; transform: scale(1.05); }
+
+        @keyframes hexAppear { to { opacity: 1; } }
+
+        .hex-cell::before {
+            content: '';
+            position: absolute;
+            width: 92%; height: 92%;
+            background-color: var(--empty);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            transition: background-color 0.1s ease;
+            pointer-events: none;
+        }
+
+        .hex-cell:hover::before { background-color: #f5f5f5; }
+
+        .hex-cell.filled { background-color: var(--filled); }
+        .hex-cell.filled::before { background-color: var(--filled); }
+
+        .hex-cell.marked::after {
+            content: '×';
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--marked);
+            font-size: 1.4rem;
+            font-weight: bold;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        /* --- Hint Styling --- */
+        .hint-group {
+            position: absolute;
+            display: flex;
+            font-size: 0.75rem;
+            font-weight: bold;
+            line-height: 1.1;
+            transition: opacity 0.3s, color 0.2s;
+            cursor: default;
+            z-index: 20;
+            background: rgba(255,255,255,0.9); 
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        .hint-group span { margin: 0 1px; }
+
+        .hint-group:hover { color: #000; background: #f0f0f0; font-weight: 900; }
+        
+        .hint-group.highlighted { color: #fff; background: #000; }
+
+        .hint-group.completed { opacity: 0.3; text-decoration: line-through; }
+
+        /* Directional Layouts */
+        .hint-group.dir-left { 
+            flex-direction: row;
+            justify-content: flex-end;
+            width: 45px;
+            text-align: right;
+        }
+        
+        .hint-group.dir-top { 
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .hint-group.dir-br { 
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        /* Line Highlighting */
+        .hex-cell.highlight::before { background-color: #e8e8e8; }
+        .hex-cell.filled.highlight::before { background-color: #222; }
+
+        #status {
+            margin-top: 30px;
+            font-size: 1rem;
+            height: 1.5em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        #instructions {
+            margin-top: 16px;
+            font-size: 0.65rem;
+            opacity: 0.5;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .hex-cell { animation: none; opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Daily Hexcross</h1>
+    <div id="date-display"></div>
+    <div id="game-container"></div>
+    <div id="status"></div>
+    <div id="instructions">Hover numbers to highlight line | Left-click: Fill | Right-click: Mark ×</div>
+
+    <script>
+        // --- Audio System ---
+        let audioCtx = null;
+        function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        function playTone(frequency, duration, type = 'square', volume = 0.08) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = type;
+            osc.frequency.value = frequency;
+            gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+        const sound = {
+            fill: () => { initAudio(); playTone(880, 0.04, 'square', 0.04); },
+            mark: () => { initAudio(); playTone(220, 0.03, 'triangle', 0.06); playTone(100, 0.06, 'sine', 0.08); },
+            erase: () => { initAudio(); playTone(330, 0.03, 'sine', 0.04); },
+            lineComplete: () => { initAudio(); playTone(660, 0.06, 'square', 0.06); setTimeout(() => playTone(990, 0.12, 'square', 0.06), 60); },
+            win: () => {
+                initAudio();
+                playTone(330, 0.12, 'square', 0.08);
+                setTimeout(() => playTone(396, 0.12, 'square', 0.08), 80);
+                setTimeout(() => playTone(495, 0.12, 'square', 0.08), 160);
+                setTimeout(() => playTone(660, 0.35, 'square', 0.08), 240);
+            }
+        };
+
+        // --- Constants & State ---
+        const DATE_STR = new Date().toISOString().slice(0, 10);
+        const GRID_RADIUS = 4; 
+        
+        const HEX_SIZE = 22; 
+        const HEX_W = Math.sqrt(3) * HEX_SIZE;
+        const HEX_H = 2 * HEX_SIZE;
+        
+        let solution = new Map();
+        let cellElements = new Map();
+        let lines = []; 
+        let completedLines = new Set();
+
+        const container = document.getElementById('game-container');
+        const statusEl = document.getElementById('status');
+
+        // --- Seeded Random ---
+        function mulberry32(seed) {
+            return function() {
+                let t = seed += 0x6D2B79F5;
+                t = Math.imul(t ^ t >>> 15, t | 1);
+                t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+        }
+        function hashString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                hash |= 0;
+            }
+            return Math.abs(hash);
+        }
+
+        // --- Hex Logic ---
+        function hexToPixel(q, r) {
+            const x = HEX_SIZE * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
+            const y = HEX_SIZE * (3/2 * r);
+            return { x, y };
+        }
+
+        function isValidHex(q, r) {
+            const s = -q - r;
+            return Math.abs(q) <= GRID_RADIUS && Math.abs(r) <= GRID_RADIUS && Math.abs(s) <= GRID_RADIUS;
+        }
+        
+        function hexKey(q, r) { return `${q},${r}`; }
+
+        // --- Line Logic ---
+        
+        // We need to generate lines in specific orders for the hint layout.
+        
+        // 1. Rows (Constant R): 
+        //    Visual Order: Top-to-Down. (R increases downwards? No, R increases downwards in graphics, but usually we want Top-to-Down reading).
+        //    Top-most row is Min R.
+        //    Loop: R from -R to +R. (This generates Top-to-Down).
+        //    Cell Order: Left-to-Right (Q from -R to +R).
+        
+        // 2. Diagonal Q (Constant Q): 
+        //    Hints on Bottom-Right.
+        //    Visual Order: Top-to-Down.
+        //    Top-most Q-line is Max Q (starts at Top-Right corner).
+        //    Bottom-most Q-line is Min Q (ends at Bottom-Left).
+        //    Loop: Q from +R to -R.
+        //    Cell Order: Hints at Bottom-Right imply reading from BR inwards?
+        //    Standard: Numbers read from the Hint side into the puzzle.
+        //    So read from BR towards TL.
+        //    Cell Loop: R from +R to -R.
+        
+        // 3. Diagonal S (Constant S):
+        //    Hints on Top-Right.
+        //    Visual Order: Top-to-Down (and Left-to-Right).
+        //    Top-most S-line is Max S (starts at Top-Center/Left).
+        //    Bottom-most S-line is Min S (starts at Right-Middle).
+        //    Wait, let's check geometry.
+        //    S = -Q-R.
+        //    Max S (S=+R): Q=0, R=-R (Top Vertex). Correct.
+        //    Min S (S=-R): Q=+R, R=0 (Right Vertex). Correct.
+        //    We want Top-to-Down. So S from +R to -R.
+        //    Cell Order: Hints at Top-Right. Read from TR inwards (towards BL).
+        //    Cell Loop: Q from +R to -R.
+
+        function getLineCoords(type, id) {
+            const cells = [];
+            // Determine loop directions based on type to ensure correct reading order
+            if (type === 'row') {
+                // Left-to-Right
+                for (let q = -GRID_RADIUS; q <= GRID_RADIUS; q++) {
+                    if (isValidHex(q, id)) cells.push({q, r: id});
+                }
+            } else if (type === 'diag-q') {
+                // Read from Bottom-Right (High R) inwards? 
+                // If hints are at BR, we read BR -> TL.
+                for (let r = GRID_RADIUS; r >= -GRID_RADIUS; r--) {
+                    if (isValidHex(id, r)) cells.push({q: id, r});
+                }
+            } else if (type === 'diag-s') {
+                // Read from Top-Right (High Q) inwards?
+                // Hint at TR. Read TR -> BL.
+                // TR cell has Max Q.
+                for (let q = GRID_RADIUS; q >= -GRID_RADIUS; q--) {
+                    if (isValidHex(q, -q-id)) cells.push({q, r: -q-id});
+                }
+            }
+            return cells;
+        }
+
+        // Helper to find specific cell for positioning
+        function getPixelForLineEnd(type, id) {
+            // We just need the first cell of the sorted line to place the hint
+            const cells = getLineCoords(type, id);
+            if (cells.length === 0) return null;
+            // The first cell is the "Start" based on reading order defined above
+            return hexToPixel(cells[0].q, cells[0].r);
+        }
+
+        function getHints(lineCells) {
+            const hints = [];
+            let count = 0;
+            // lineCells are already ordered correctly (Start-to-End)
+            for (const coord of lineCells) {
+                const key = hexKey(coord.q, coord.r);
+                if (solution.get(key) === 1) count++;
+                else if (count > 0) { hints.push(count); count = 0; }
+            }
+            if (count > 0) hints.push(count);
+            return hints.length === 0 ? [0] : hints;
+        }
+
+        // --- Initialization ---
+        function initGame() {
+            statusEl.innerText = '';
+            container.innerHTML = '';
+            solution.clear();
+            cellElements.clear();
+            lines = [];
+            completedLines.clear();
+
+            const seedVal = hashString(DATE_STR + 'hex');
+            const random = mulberry32(seedVal);
+
+            // 1. Generate Solution
+            for (let q = -GRID_RADIUS; q <= GRID_RADIUS; q++) {
+                for (let r = -GRID_RADIUS; r <= GRID_RADIUS; r++) {
+                    if (isValidHex(q, r)) {
+                        solution.set(hexKey(q, r), random() > 0.40 ? 1 : 0); 
+                    }
+                }
+            }
+
+            // 2. Generate Hex DOM
+            let bounds = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+            
+            for (let q = -GRID_RADIUS; q <= GRID_RADIUS; q++) {
+                for (let r = -GRID_RADIUS; r <= GRID_RADIUS; r++) {
+                    if (!isValidHex(q, r)) continue;
+                    const pos = hexToPixel(q, r);
+                    bounds.minX = Math.min(bounds.minX, pos.x);
+                    bounds.maxX = Math.max(bounds.maxX, pos.x);
+                    bounds.minY = Math.min(bounds.minY, pos.y);
+                    bounds.maxY = Math.max(bounds.maxY, pos.y);
+                }
+            }
+
+            const padding = 80;
+            const offsetX = -bounds.minX + padding;
+            const offsetY = -bounds.minY + padding;
+
+            // Create Hexes
+            let cellIndex = 0;
+            for (let q = -GRID_RADIUS; q <= GRID_RADIUS; q++) {
+                for (let r = -GRID_RADIUS; r <= GRID_RADIUS; r++) {
+                    if (!isValidHex(q, r)) continue;
+                    
+                    const pos = hexToPixel(q, r);
+                    const el = document.createElement('div');
+                    el.className = 'hex-cell';
+                    el.style.left = (pos.x + offsetX - HEX_W/2) + 'px';
+                    el.style.top = (pos.y + offsetY - HEX_H/2) + 'px';
+                    el.style.animationDelay = (cellIndex * 15) + 'ms';
+                    el.dataset.key = hexKey(q, r);
+                    container.appendChild(el);
+                    cellElements.set(hexKey(q, r), el);
+                    cellIndex++;
+                }
+            }
+
+            // 3. Generate Lines & Hints
+            const lineConfigs = [
+                // Rows: Left side. Order Top-to-Down (-R to +R).
+                { type: 'row', loopStart: -GRID_RADIUS, loopEnd: GRID_RADIUS, loopStep: 1, hintClass: 'dir-left', dx: -50, dy: -5 },
+                
+                // Diagonals Q: Bottom-Right side. Order Top-to-Down (+R to -R).
+                { type: 'diag-q', loopStart: GRID_RADIUS, loopEnd: -GRID_RADIUS, loopStep: -1, hintClass: 'dir-br', dx: 10, dy: 10 },
+                
+                // Diagonals S: Top-Right side. Order Top-to-Down (+R to -R).
+                { type: 'diag-s', loopStart: GRID_RADIUS, loopEnd: -GRID_RADIUS, loopStep: -1, hintClass: 'dir-top', dx: 10, dy: -30 }
+            ];
+
+            lineConfigs.forEach(config => {
+                for (let id = config.loopStart; config.loopStep > 0 ? id <= config.loopEnd : id >= config.loopEnd; id += config.loopStep) {
+                    const coords = getLineCoords(config.type, id);
+                    if (coords.length === 0) continue;
+
+                    const lineObj = { 
+                        type: config.type, 
+                        id: id, 
+                        cells: coords.map(c => hexKey(c.q, c.r)), 
+                        hintClass: config.hintClass 
+                    };
+
+                    const el = document.createElement('div');
+                    el.className = `hint-group ${config.hintClass}`;
+                    
+                    const hints = getHints(coords);
+                    hints.forEach(n => {
+                        const s = document.createElement('span');
+                        s.innerText = n;
+                        el.appendChild(s);
+                    });
+
+                    // Position hint at the "Start" cell (first in array)
+                    const pos = hexToPixel(coords[0].q, coords[0].r);
+                    let hx = pos.x + offsetX;
+                    let hy = pos.y + offsetY;
+                    el.style.left = (hx + config.dx) + 'px';
+                    el.style.top = (hy + config.dy) + 'px';
+
+                    // Interactions
+                    el.addEventListener('mouseenter', () => {
+                        lineObj.cells.forEach(k => {
+                            const c = cellElements.get(k);
+                            if(c) c.classList.add('highlight');
+                        });
+                        el.classList.add('highlighted');
+                    });
+                    el.addEventListener('mouseleave', () => {
+                        lineObj.cells.forEach(k => {
+                            const c = cellElements.get(k);
+                            if(c) c.classList.remove('highlight');
+                        });
+                        el.classList.remove('highlighted');
+                    });
+
+                    container.appendChild(el);
+                    lineObj.element = el;
+                    lines.push(lineObj);
+                }
+            });
+
+            // Size Container
+            const w = bounds.maxX - bounds.minX + padding * 2;
+            const h = bounds.maxY - bounds.minY + padding * 2;
+            container.style.width = w + 'px';
+            container.style.height = h + 'px';
+        }
+
+        // --- Interaction ---
+        let isDrawing = false;
+        let dragMode = null;
+
+        function applyDragState(cell, silent = false) {
+            if (!cell || !cell.classList.contains('hex-cell')) return;
+            const isFilled = cell.classList.contains('filled');
+            const isMarked = cell.classList.contains('marked');
+
+            if (dragMode === 'fill') {
+                if (!isFilled) {
+                    cell.classList.remove('marked');
+                    cell.classList.add('filled');
+                    if (!silent) sound.fill();
+                }
+            } else if (dragMode === 'mark') {
+                if (!isMarked) {
+                    cell.classList.remove('filled');
+                    cell.classList.add('marked');
+                    if (!silent) sound.mark();
+                }
+            } else if (dragMode === 'erase') {
+                if (isFilled || isMarked) {
+                    cell.classList.remove('filled', 'marked');
+                    if (!silent) sound.erase();
+                }
+            }
+        }
+
+        container.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('hex-cell')) {
+                isDrawing = true;
+                const isFilled = e.target.classList.contains('filled');
+                const isMarked = e.target.classList.contains('marked');
+                dragMode = e.button === 2 ? (isMarked ? 'erase' : 'mark') : (isFilled ? 'erase' : 'fill');
+                applyDragState(e.target);
+                checkLineCompletion();
+                checkWin();
+            }
+        });
+
+        container.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            applyDragState(e.target, true);
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDrawing) {
+                isDrawing = false; dragMode = null;
+                checkLineCompletion(); checkWin();
+            }
+        });
+
+        container.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Touch Support
+        container.addEventListener('touchstart', (e) => {
+             const touch = e.touches[0];
+             const target = document.elementFromPoint(touch.clientX, touch.clientY);
+             if (target && target.classList.contains('hex-cell')) {
+                 e.preventDefault();
+                 isDrawing = true;
+                 const isFilled = target.classList.contains('filled');
+                 const isMarked = target.classList.contains('marked');
+                 dragMode = isFilled ? 'erase' : (isMarked ? 'erase' : 'fill');
+                 applyDragState(target);
+                 checkLineCompletion(); checkWin();
+             }
+        }, { passive: false });
+        
+        container.addEventListener('touchmove', (e) => {
+            if (!isDrawing) return;
+            const touch = e.touches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            applyDragState(target, true);
+        });
+        
+        container.addEventListener('touchend', () => {
+            if(isDrawing) { isDrawing = false; dragMode = null; checkLineCompletion(); checkWin(); }
+        });
+
+        // --- Logic ---
+        function checkLineCompletion() {
+            lines.forEach((line, idx) => {
+                let isCorrect = true;
+                for (const key of line.cells) {
+                    const cell = cellElements.get(key);
+                    if (!cell) continue;
+                    const isFilled = cell.classList.contains('filled');
+                    if (isFilled !== (solution.get(key) === 1)) { isCorrect = false; break; }
+                }
+                
+                const el = line.element;
+                if (isCorrect && !completedLines.has(idx)) {
+                    el.classList.add('completed');
+                    sound.lineComplete();
+                    completedLines.add(idx);
+                } else if (!isCorrect) {
+                    el.classList.remove('completed');
+                    completedLines.delete(idx);
+                }
+            });
+        }
+
+        function checkWin() {
+            for (const [key, expected] of solution) {
+                const cell = cellElements.get(key);
+                if (!cell) continue;
+                const isFilled = cell.classList.contains('filled');
+                if (isFilled !== (expected === 1)) return;
+            }
+            sound.win();
+            statusEl.innerText = 'Solved';
+        }
+
+        // --- Start ---
+        document.getElementById('date-display').innerText = DATE_STR;
+        initGame();
+
+    </script>
+</body>
+</html>
