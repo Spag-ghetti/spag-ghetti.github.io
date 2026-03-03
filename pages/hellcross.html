@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diagonal Hexcross</title>
+    <title>Daily Diagonal Hexcross</title>
     <style>
         :root {
             --bg: #ffffff;
@@ -171,7 +171,7 @@
     </style>
 </head>
 <body>
-    <h1>Diagonal Hexcross</h1>
+    <h1>Daily Hellcross</h1>
     <div id="date-display"></div>
     <div id="game-container"></div>
     <div id="status"></div>
@@ -211,9 +211,9 @@
         // --- Constants & State ---
         const DATE_STR = new Date().toISOString().slice(0, 10);
         
-        // New Geometry Constants
+        //Geometry Constants
         const STRIPE_WIDTH = 3;     // Width of the diagonal band (Radius Q)
-        const STRIPE_LENGTH = 12;   // Length of the band (Radius S)
+        const STRIPE_LENGTH = 6;   // Length of the band (Radius S)
         
         const HEX_SIZE = 22; 
         const HEX_W = Math.sqrt(3) * HEX_SIZE;
