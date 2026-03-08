@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perlipsi - Modular Resume Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Dark Mode (Default) */
+            --bg-primary: #18181b;
+            --bg-secondary: #1f1f23;
+            --bg-tertiary: #27272a;
+            --bg-hover: #3f3f46;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent: #f97316;
+            --accent-hover: #ea580c;
+            --accent-light: #fb923c;
+            --accent-bg: rgba(249, 115, 22, 0.1);
+            --border: #3f3f46;
+            --border-light: #52525b;
+            --scrollbar: #3f3f46;
+            --editor-bg: #1a1a1d;
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f4f4f5;
+            --bg-tertiary: #e4e4e7;
+            --bg-hover: #d4d4d8;
+            --text-primary: #18181b;
+            --text-secondary: #3f3f46;
+            --text-muted: #71717a;
+            --border: #e4e4e7;
+            --border-light: #d4d4d8;
+            --scrollbar: #d4d4d8;
+            --editor-bg: #fafafa;
+            --accent-bg: rgba(249, 115, 22, 0.05);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* Top Toolbar */
+        .toolbar {
+            height: 54px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+        }
+
+        .toolbar-left, .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 20px;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .project-name {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 7px 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            width: 200px;
+        }
+
+        .project-name:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .toolbar-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .toolbar-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--border-light);
+        }
+
+        .toolbar-btn.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .toolbar-btn.primary:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+        }
+
+        .toolbar-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        .theme-toggle {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg-hover);
+            color: var(--accent);
+        }
+
+        .theme-toggle svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 54px);
+        }
+
+        /* Module Sidebar */
+        .module-sidebar {
+            width: 260px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: var(--text-muted);
+        }
+
+        .add-module-btn {
+            width: 28px;
+            height: 28px;
+            background: var(--accent);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 18px;
+        }
+
+        .add-module-btn:hover {
+            background: var(--accent-hover);
+            transform: scale(1.05);
+        }
+
+        .module-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .module-list::-webkit-scrollbar { width: 6px; }
+        .module-list::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+
+        .module-item {
+            padding: 12px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+        }
+
+        .module-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .module-item.active {
+            background: var(--accent-bg);
+            border-color: var(--accent);
+        }
+
+        .module-item.active .module-icon {
+            background: var(--accent);
+            color: white;
+        }
+        
+        .module-item.active .module-icon svg {
+            fill: white;
+        }
+
+        .module-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .module-icon svg {
+            width: 16px;
+            height: 16px;
+            fill: var(--text-muted);
+        }
+
+        .module-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .module-name {
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .module-type {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .module-actions {
+            display: none;
+            gap: 2px;
+        }
+
+        .module-item:hover .module-actions {
+            display: flex;
+        }
+
+        .module-action-btn {
+            width: 24px;
+            height: 24px;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .module-action-btn:hover {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .module-action-btn.delete:hover {
+            color: var(--danger);
+        }
+
+        .module-action-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
+
+        /* Editor Panel */
+        .editor-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: var(--editor-bg);
+            border-right: 1px solid var(--border);
+        }
+
+        .editor-tabs {
+            display: flex;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 0 10px;
+        }
+
+        .editor-tab {
+            padding: 12px 18px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .editor-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .editor-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .editor-content {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .visual-editor {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: none;
+        }
+
+        .visual-editor.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input {
+            width: 100%;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-bg);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .entry-list {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .entry-item {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            padding: 16px;
+        }
+
+        .entry-item:last-child { border-bottom: none; }
+
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .entry-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--accent);
+        }
+
+        .entry-delete {
+            width: 28px;
+            height: 28px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .entry-delete:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .entry-delete svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        .add-entry-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--bg-tertiary);
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .add-entry-btn:hover {
+            background: var(--bg-hover);
+            color: var(--accent);
+        }
+
+        /* LaTeX Editor */
+        .latex-editor {
+            flex: 1;
+            display: none;
+            overflow: hidden;
+        }
+
+        .latex-editor.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .latex-textarea {
+            flex: 1;
+            width: 100%;
+            background: var(--editor-bg);
+            border: none;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            padding: 20px;
+            resize: none;
+        }
+
+        .latex-textarea:focus { outline: none; }
+
+        /* Preview Panel */
+        .preview-panel {
+            width: 50%;
+            background: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .preview-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 18px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .preview-tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-secondary);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .preview-tab {
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .preview-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .preview-tab.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .template-select {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 7px 12px;
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .preview-content {
+            flex: 1;
+            overflow: auto;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            background: #2a2a2a;
+            background-image: radial-gradient(#3a3a3a 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Resume Preview Styles */
+        .resume-preview {
+            width: 8.5in;
+            min-height: 11in;
+            background: white;
+            box-shadow: 0 6px 40px rgba(0, 0, 0, 0.5);
+            color: #1a1a1a;
+            font-size: 10pt;
+            line-height: 1.4;
+        }
+
+        /* Classic Theme */
+        .resume-preview.classic {
+            padding: 0.6in;
+        }
+        .resume-preview.classic .resume-header {
+            text-align: center;
+            border-bottom: 2px solid #1a1a1a;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        .resume-preview.classic .resume-name {
+            font-size: 22pt;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        .resume-preview.classic .resume-section-title {
+            font-size: 11pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 4px;
+            margin-bottom: 10px;
+        }
+        
+        /* Traditional Theme (Bold) */
+        .resume-preview.traditional {
+            padding: 0.5in;
+            font-family: 'Times New Roman', Times, serif;
+        }
+        .resume-preview.traditional .resume-header {
+            text-align: center;
+            border-bottom: 3px double #000;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .resume-preview.traditional .resume-name {
+            font-size: 24pt;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        .resume-preview.traditional .resume-section-title {
+            font-size: 12pt;
+            font-weight: 900;
+            text-transform: uppercase;
+            background: #000;
+            color: #fff;
+            padding: 3px 8px;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        .resume-preview.traditional .resume-entry-title {
+            font-weight: 700;
+            font-size: 11pt;
+        }
+
+        /* Executive Theme */
+        .resume-preview.executive {
+            padding: 0.5in 0.6in;
+            border-left: 8px solid var(--accent); /* Uses orange */
+        }
+        .resume-preview.executive .resume-header {
+            margin-bottom: 20px;
+        }
+        .resume-preview.executive .resume-name {
+            font-size: 26pt;
+            font-weight: 300;
+            color: #000;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+        }
+        .resume-preview.executive .resume-section-title {
+            font-size: 10pt;
+            font-weight: 700;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+        .resume-preview.executive .resume-entry {
+            border-left: 2px solid #eee;
+            padding-left: 12px;
+            margin-bottom: 15px;
+        }
+
+        /* Elegant Theme */
+        .resume-preview.elegant {
+            padding: 0.6in;
+            font-family: 'Georgia', serif;
+        }
+        .resume-preview.elegant .resume-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .resume-preview.elegant .resume-name {
+            font-size: 24pt;
+            font-weight: 400;
+            font-style: italic;
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            padding-bottom: 5px;
+        }
+        .resume-preview.elegant .resume-section-title {
+            font-size: 11pt;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 3px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+        .resume-preview.elegant .resume-section-title::after {
+            content: '';
+            display: block;
+            width: 40px;
+            height: 1px;
+            background: #000;
+            margin: 5px auto 0;
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 440px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            animation: modalIn 0.25s ease;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-header {
+            padding: 18px 22px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            background: var(--bg-tertiary);
+            border: none;
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .modal-close svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .modal-body {
+            padding: 18px 22px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .module-template, .export-option {
+            padding: 14px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: all 0.2s;
+        }
+
+        .module-template:hover, .export-option:hover {
+            border-color: var(--accent);
+            background: var(--bg-hover);
+        }
+
+        .module-template-icon, .export-option-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .module-template-icon svg, .export-option-icon svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--accent);
+        }
+
+        .module-template-info h4, .export-option-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .module-template-info p, .export-option-info p {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Resize Handle */
+        .resize-handle {
+            width: 4px;
+            background: var(--border);
+            cursor: col-resize;
+            transition: background 0.2s;
+        }
+
+        .resize-handle:hover {
+            background: var(--accent);
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .toast {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            animation: toastIn 0.3s ease;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .toast svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .toast.success svg { fill: var(--success); }
+        .toast.info svg { fill: var(--accent); }
+
+        /* Helpers */
+        .empty-state {
+            text-align: center;
+            padding: 60px 40px;
+            color: var(--text-muted);
+        }
+        .empty-state svg { width: 60px; height: 60px; fill: var(--border); margin-bottom: 20px; }
+        .empty-state h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <div class="toolbar-left">
+            <div class="logo">
+                <div class="logo-icon">P</div>
+                Perlipsi
+            </div>
+            <input type="text" class="project-name" id="projectName" value="My Resume" spellcheck="false">
+        </div>
+        
+        <div class="toolbar-right">
+            <button class="toolbar-btn" id="importBtn">
+                <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                Import LaTeX
+            </button>
+            <button class="toolbar-btn primary" onclick="openExportModal()">
+                <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                Export
+            </button>
+            <div class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+                <svg id="sunIcon" viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>
+                <svg id="moonIcon" style="display:none;" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Module Sidebar -->
+        <div class="module-sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-title">Modules</span>
+                <button class="add-module-btn" onclick="openModuleModal()">+</button>
+            </div>
+            <div class="module-list" id="moduleList"></div>
+        </div>
+
+        <!-- Editor Panel -->
+        <div class="editor-panel">
+            <div class="editor-tabs">
+                <div class="editor-tab active" data-tab="visual" onclick="switchEditorTab('visual')">Visual Editor</div>
+                <div class="editor-tab" data-tab="latex" onclick="switchEditorTab('latex')">LaTeX Source</div>
+            </div>
+            <div class="editor-content">
+                <div class="visual-editor active" id="visualEditor"></div>
+                <div class="latex-editor" id="latexEditor">
+                    <textarea class="latex-textarea" id="latexTextarea" spellcheck="false"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="resize-handle" id="resizeHandle"></div>
+
+        <!-- Preview Panel -->
+        <div class="preview-panel" id="previewPanel">
+            <div class="preview-toolbar">
+                <div class="preview-tabs">
+                    <button class="preview-tab active" data-preview="preview" onclick="switchPreviewTab('preview')">Preview</button>
+                    <button class="preview-tab" data-preview="latex" onclick="switchPreviewTab('latex')">LaTeX</button>
+                </div>
+                <select class="template-select" id="templateSelect" onchange="changeTemplate()">
+                    <option value="classic">Classic</option>
+                    <option value="traditional">Traditional</option>
+                    <option value="executive">Executive</option>
+                    <option value="elegant">Elegant</option>
+                </select>
+            </div>
+            <div class="preview-content" id="previewContent">
+                <div class="resume-preview classic" id="resumePreview"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden File Input -->
+    <input type="file" id="fileInput" accept=".tex" style="display: none;">
+
+    <!-- Add Module Modal -->
+    <div class="modal-overlay" id="moduleModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Module</h3>
+                <button class="modal-close" onclick="closeModal('moduleModal')">
+                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div class="modal-body" id="moduleModalBody">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Export Resume</h3>
+                <button class="modal-close" onclick="closeModal('exportModal')">
+                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="export-option" onclick="exportPDF()">
+                    <div class="export-option-icon"><svg viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1z"/></svg></div>
+                    <div class="export-option-info"><h4>Export as PDF</h4><p>Print-ready document via browser</p></div>
+                </div>
+                <div class="export-option" onclick="exportLaTeX()">
+                    <div class="export-option-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></div>
+                    <div class="export-option-info"><h4>Export as LaTeX</h4><p>Download .tex source file</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // --- Data Structure & State ---
+        let resumeData = {
+            modules: [],
+            activeModule: null,
+            template: 'classic'
+        };
+
+        let autoSaveTimeout = null;
+
+        const moduleTypes = {
+            header: {
+                name: 'Header', icon: 'user',
+                defaultData: { name: '', title: '', email: '', phone: '', location: '', linkedin: '', website: '' },
+                generateLatex: (d) => `\\begin{center}\n    {\\LARGE \\textbf{${d.name}}}\\\\[5pt]\n    ${d.title ? `\\textit{${d.title}}\\\\[8pt]` : ''}\n    ${[d.email, d.phone, d.location].filter(Boolean).join(' $|$ ')}\\\\\n    ${[d.linkedin, d.website].filter(Boolean).join(' $|$ ')}\n\\end{center}`
+            },
+            summary: {
+                name: 'Summary', icon: 'align-left',
+                defaultData: { text: '' },
+                generateLatex: (d) => d.text ? `\\section*{Professional Summary}\n${d.text}` : ''
+            },
+            experience: {
+                name: 'Experience', icon: 'briefcase',
+                defaultData: { entries: [] },
+                generateLatex: (d) => {
+                    if (!d.entries.length) return '';
+                    let tex = '\\section*{Work Experience}\n\\begin{itemize}\n';
+                    d.entries.forEach(e => {
+                        tex += `    \\item \\textbf{${e.title || ''}} --- ${e.company || ''}, ${e.location || ''}\\\\\n    \\textit{${e.startDate || ''} -- ${e.endDate || ''}}\\\\\n    ${e.description ? e.description.split('\n').map(l => l.replace(/^[•\-\*]\s*/, '')).filter(l=>l).join('\\\\\n    ') : ''}\n`;
+                    });
+                    return tex + '\\end{itemize}';
+                }
+            },
+            education: {
+                name: 'Education', icon: 'book',
+                defaultData: { entries: [] },
+                generateLatex: (d) => {
+                    if (!d.entries.length) return '';
+                    let tex = '\\section*{Education}\n\\begin{itemize}\n';
+                    d.entries.forEach(e => {
+                        tex += `    \\item \\textbf{${e.degree || ''}} --- ${e.school || ''}\\\\\n    \\textit{${e.startDate || ''} -- ${e.endDate || ''}}${e.gpa ? `, GPA: ${e.gpa}` : ''}\\\\\n    ${e.details || ''}\n`;
+                    });
+                    return tex + '\\end{itemize}';
+                }
+            },
+            skills: {
+                name: 'Skills', icon: 'tool',
+                defaultData: { categories: [] },
+                generateLatex: (d) => {
+                    if (!d.categories.length) return '';
+                    let tex = '\\section*{Skills}\n\\begin{itemize}\n';
+                    d.categories.forEach(c => {
+                        tex += `    \\item \\textbf{${c.name || ''}:} ${c.skills || ''}\n`;
+                    });
+                    return tex + '\\end{itemize}';
+                }
+            },
+            projects: {
+                name: 'Projects', icon: 'code',
+                defaultData: { entries: [] },
+                generateLatex: (d) => {
+                    if (!d.entries.length) return '';
+                    let tex = '\\section*{Projects}\n\\begin{itemize}\n';
+                    d.entries.forEach(e => {
+                        tex += `    \\item \\textbf{${e.name || ''}} ${e.tech ? `(${e.tech})` : ''}\\\\\n    ${e.link || ''}\\\\\n    ${e.description || ''}\n`;
+                    });
+                    return tex + '\\end{itemize}';
+                }
+            },
+            custom: {
+                name: 'Custom LaTeX', icon: 'edit',
+                defaultData: { latex: '% Your custom LaTeX here' },
+                generateLatex: (d) => d.latex
+            }
+        };
+
+        const icons = {
+            user: '<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',
+            'align-left': '<svg viewBox="0 0 24 24"><path d="M15 15H3v2h12v-2zm0-8H3v2h12V7zM3 13h18v-2H3v2zm0 8h18v-2H3v2zM3 3v2h18V3H3z"/></svg>',
+            briefcase: '<svg viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>',
+            book: '<svg viewBox="0 0 24 24"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>',
+            tool: '<svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>',
+            code: '<svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>',
+            edit: '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>'
+        };
+
+        // --- Init ---
+        function init() {
+            loadFromStorage();
+            renderModuleModalBody();
+            renderModuleList();
+            if (resumeData.modules.length > 0) selectModule(resumeData.modules[0].id);
+            else renderEmptyState();
+            updatePreview();
+            setupListeners();
+            setupResize();
+            
+            // Theme init
+            const savedTheme = localStorage.getItem('perlipsi_theme') || 'dark';
+            if (savedTheme === 'light') toggleTheme(true);
+        }
+
+        // --- Storage & Auto-save ---
+        function loadFromStorage() {
+            const saved = localStorage.getItem('perlipsi_data');
+            if (saved) {
+                try { resumeData = JSON.parse(saved); } 
+                catch (e) { console.error("Load failed", e); }
+            }
+        }
+
+        function triggerAutoSave() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                localStorage.setItem('perlipsi_data', JSON.stringify(resumeData));
+                showToast('Auto-saved', 'info');
+            }, 2000);
+        }
+
+        // --- Theme ---
+        function toggleTheme(init=false) {
+            const body = document.body;
+            const isLight = body.hasAttribute('data-theme', 'light');
+            
+            if (isLight) {
+                body.removeAttribute('data-theme');
+                document.getElementById('sunIcon').style.display = 'block';
+                document.getElementById('moonIcon').style.display = 'none';
+                localStorage.setItem('perlipsi_theme', 'dark');
+            } else {
+                body.setAttribute('data-theme', 'light');
+                document.getElementById('sunIcon').style.display = 'none';
+                document.getElementById('moonIcon').style.display = 'block';
+                localStorage.setItem('perlipsi_theme', 'light');
+            }
+        }
+
+        // --- Module List Rendering ---
+        function renderModuleList() {
+            const container = document.getElementById('moduleList');
+            if (resumeData.modules.length === 0) {
+                container.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zM8 17h8v-2H8v2zm0-4h8v-2H8v2z"/></svg><h3>No modules</h3><p>Add modules to build your resume</p></div>`;
+                return;
+            }
+
+            container.innerHTML = resumeData.modules.map(mod => {
+                const type = moduleTypes[mod.type];
+                const isActive = mod.id === resumeData.activeModule;
+                return `
+                    <div class="module-item ${isActive ? 'active' : ''}" data-id="${mod.id}" onclick="selectModule('${mod.id}')">
+                        <div class="module-icon">${icons[type.icon]}</div>
+                        <div class="module-info">
+                            <div class="module-name">${type.name}</div>
+                            <div class="module-type">Module</div>
+                        </div>
+                        <div class="module-actions">
+                            <button class="module-action-btn delete" onclick="event.stopPropagation(); deleteModule('${mod.id}')" title="Delete">
+                                <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- Editor Rendering ---
+        function selectModule(id) {
+            resumeData.activeModule = id;
+            renderModuleList();
+            renderVisualEditor();
+            updateLatexTextarea();
+        }
+
+        function renderEmptyState() {
+            document.getElementById('visualEditor').innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg><h3>Select a Module</h3><p>Add a module from the sidebar to begin editing</p></div>`;
+        }
+
+        function renderVisualEditor() {
+            const container = document.getElementById('visualEditor');
+            const mod = resumeData.modules.find(m => m.id === resumeData.activeModule);
+            if (!mod) { renderEmptyState(); return; }
+
+            let html = `<div class="slide-in">`;
+            
+            // Switch renderers based on type
+            const renderers = {
+                header: renderHeader, summary: renderSummary, experience: renderList('experience'),
+                education: renderList('education'), skills: renderSkills, projects: renderList('projects'), custom: renderCustom
+            };
+            
+            html += renderers[mod.type](mod);
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        // Specific Renderers
+        function renderHeader(mod) {
+            const d = mod.data;
+            return `
+                <div class="form-row"><div class="form-group"><label class="form-label">Full Name</label><input class="form-input" value="${d.name||''}" onchange="updateData('${mod.id}', 'name', this.value)"></div><div class="form-group"><label class="form-label">Title</label><input class="form-input" value="${d.title||''}" onchange="updateData('${mod.id}', 'title', this.value)"></div></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">Email</label><input class="form-input" value="${d.email||''}" onchange="updateData('${mod.id}', 'email', this.value)"></div><div class="form-group"><label class="form-label">Phone</label><input class="form-input" value="${d.phone||''}" onchange="updateData('${mod.id}', 'phone', this.value)"></div></div>
+                <div class="form-group"><label class="form-label">Location</label><input class="form-input" value="${d.location||''}" onchange="updateData('${mod.id}', 'location', this.value)"></div>
+                <div class="form-row"><div class="form-group"><label class="form-label">LinkedIn</label><input class="form-input" value="${d.linkedin||''}" onchange="updateData('${mod.id}', 'linkedin', this.value)"></div><div class="form-group"><label class="form-label">Website</label><input class="form-input" value="${d.website||''}" onchange="updateData('${mod.id}', 'website', this.value)"></div></div>
+            `;
+        }
+
+        function renderSummary(mod) {
+            return `<div class="form-group"><label class="form-label">Summary Text</label><textarea class="form-input form-textarea" onchange="updateData('${mod.id}', 'text', this.value)">${mod.data.text||''}</textarea></div>`;
+        }
+
+        function renderList(type) {
+            return (mod) => {
+                const configs = {
+                    experience: { fields: ['title', 'company', 'location', 'startDate', 'endDate', 'description'], textarea: ['description'] },
+                    education: { fields: ['degree', 'school', 'location', 'startDate', 'endDate', 'gpa', 'details'], textarea: ['details'] },
+                    projects: { fields: ['name', 'tech', 'link', 'description'], textarea: ['description'] }
+                };
+                const config = configs[type];
+                const labels = { title:'Title', company:'Company', location:'Location', startDate:'Start Date', endDate:'End Date', description:'Description (Bullet points)', degree:'Degree', school:'School', gpa:'GPA', details:'Details', name:'Project Name', tech:'Technologies', link:'Link' };
+                
+                let html = `<div class="entry-list">`;
+                (mod.data.entries || []).forEach((entry, i) => {
+                    html += `<div class="entry-item"><div class="entry-header"><span class="entry-title">Entry ${i+1}</span><button class="entry-delete" onclick="deleteEntry('${mod.id}', ${i})"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button></div>`;
+                    
+                    // Rows
+                    if (type === 'experience') {
+                        html += `<div class="form-row"><div class="form-group"><label class="form-label">Title</label><input class="form-input" value="${entry.title||''}" onchange="updateEntry('${mod.id}', ${i}, 'title', this.value)"></div><div class="form-group"><label class="form-label">Company</label><input class="form-input" value="${entry.company||''}" onchange="updateEntry('${mod.id}', ${i}, 'company', this.value)"></div></div>`;
+                        html += `<div class="form-row"><div class="form-group"><label class="form-label">Start</label><input class="form-input" value="${entry.startDate||''}" onchange="updateEntry('${mod.id}', ${i}, 'startDate', this.value)"></div><div class="form-group"><label class="form-label">End</label><input class="form-input" value="${entry.endDate||''}" onchange="updateEntry('${mod.id}', ${i}, 'endDate', this.value)"></div></div>`;
+                        html += `<div class="form-group"><label class="form-label">Location</label><input class="form-input" value="${entry.location||''}" onchange="updateEntry('${mod.id}', ${i}, 'location', this.value)"></div>`;
+                        html += `<div class="form-group"><label class="form-label">Description</label><textarea class="form-input form-textarea" onchange="updateEntry('${mod.id}', ${i}, 'description', this.value)">${entry.description||''}</textarea></div>`;
+                    } else if (type === 'education') {
+                        html += `<div class="form-group"><label class="form-label">Degree</label><input class="form-input" value="${entry.degree||''}" onchange="updateEntry('${mod.id}', ${i}, 'degree', this.value)"></div>`;
+                        html += `<div class="form-row"><div class="form-group"><label class="form-label">School</label><input class="form-input" value="${entry.school||''}" onchange="updateEntry('${mod.id}', ${i}, 'school', this.value)"></div><div class="form-group"><label class="form-label">Location</label><input class="form-input" value="${entry.location||''}" onchange="updateEntry('${mod.id}', ${i}, 'location', this.value)"></div></div>`;
+                        html += `<div class="form-row"><div class="form-group"><label class="form-label">Start</label><input class="form-input" value="${entry.startDate||''}" onchange="updateEntry('${mod.id}', ${i}, 'startDate', this.value)"></div><div class="form-group"><label class="form-label">End</label><input class="form-input" value="${entry.endDate||''}" onchange="updateEntry('${mod.id}', ${i}, 'endDate', this.value)"></div></div>`;
+                        html += `<div class="form-row"><div class="form-group"><label class="form-label">GPA</label><input class="form-input" value="${entry.gpa||''}" onchange="updateEntry('${mod.id}', ${i}, 'gpa', this.value)"></div><div class="form-group"><label class="form-label">Details</label><input class="form-input" value="${entry.details||''}" onchange="updateEntry('${mod.id}', ${i}, 'details', this.value)"></div></div>`;
+                    } else if (type === 'projects') {
+                        html += `<div class="form-row"><div class="form-group"><label class="form-label">Name</label><input class="form-input" value="${entry.name||''}" onchange="updateEntry('${mod.id}', ${i}, 'name', this.value)"></div><div class="form-group"><label class="form-label">Tech</label><input class="form-input" value="${entry.tech||''}" onchange="updateEntry('${mod.id}', ${i}, 'tech', this.value)"></div></div>`;
+                        html += `<div class="form-group"><label class="form-label">Link</label><input class="form-input" value="${entry.link||''}" onchange="updateEntry('${mod.id}', ${i}, 'link', this.value)"></div>`;
+                        html += `<div class="form-group"><label class="form-label">Description</label><textarea class="form-input form-textarea" onchange="updateEntry('${mod.id}', ${i}, 'description', this.value)">${entry.description||''}</textarea></div>`;
+                    }
+                    html += `</div>`;
+                });
+                html += `<button class="add-entry-btn" onclick="addEntry('${mod.id}', '${type}')">+ Add Entry</button></div>`;
+                return html;
+            };
+        }
+
+        function renderSkills(mod) {
+            let html = `<div class="entry-list">`;
+            (mod.data.categories || []).forEach((cat, i) => {
+                html += `<div class="entry-item"><div class="entry-header"><span class="entry-title">Category ${i+1}</span><button class="entry-delete" onclick="deleteCategory('${mod.id}', ${i})"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button></div>`;
+                html += `<div class="form-group"><label class="form-label">Category Name</label><input class="form-input" value="${cat.name||''}" onchange="updateCategory('${mod.id}', ${i}, 'name', this.value)"></div>`;
+                html += `<div class="form-group"><label class="form-label">Skills (comma separated)</label><input class="form-input" value="${cat.skills||''}" onchange="updateCategory('${mod.id}', ${i}, 'skills', this.value)"></div></div>`;
+            });
+            html += `<button class="add-entry-btn" onclick="addCategory('${mod.id}')">+ Add Category</button></div>`;
+            return html;
+        }
+
+        function renderCustom(mod) {
+            return `<div class="form-group"><label class="form-label">Custom LaTeX Code</label><textarea class="form-input form-textarea" style="font-family:monospace; min-height:300px;" onchange="updateData('${mod.id}', 'latex', this.value)">${mod.data.latex||''}</textarea></div>`;
+        }
+
+        // --- Data Modification ---
+        function updateData(id, key, val) {
+            const mod = resumeData.modules.find(m => m.id === id);
+            if (mod) { mod.data[key] = val; updatePreview(); triggerAutoSave(); }
+        }
+
+        function updateEntry(id, idx, key, val) {
+            const mod = resumeData.modules.find(m => m.id === id);
+            if (mod && mod.data.entries[idx]) { mod.data.entries[idx][key] = val; updatePreview(); triggerAutoSave(); }
+        }
+
+        function updateCategory(id, idx, key, val) {
+            const mod = resumeData.modules.find(m => m.id === id);
+            if (mod && mod.data.categories[idx]) { mod.data.categories[idx][key] = val; updatePreview(); triggerAutoSave(); }
+        }
+
+        function addEntry(id, type) {
+            const mod = resumeData.modules.find(m => m.id === id);
+            const templates = { experience: {title:'',company:'',location:'',startDate:'',endDate:'',description:''}, education: {degree:'',school:'',location:'',startDate:'',endDate:'',gpa:'',details:''}, projects: {name:'',tech:'',link:'',description:''} };
+            if (mod) { mod.data.entries.push(templates[type]); renderVisualEditor(); updatePreview(); triggerAutoSave(); }
+        }
+
+        function deleteEntry(id, idx) {
+            const mod = resumeData.modules.find(m => m.id === id);
+            if (mod) { mod.data.entries.splice(idx, 1); renderVisualEditor(); updatePreview(); triggerAutoSave(); }
+        }
+
+        function addCategory(id) {
+            const mod = resumeData.modules.find(m => m.id === id);
+            if (mod) { mod.data.categories.push({name:'', skills:''}); renderVisualEditor(); triggerAutoSave(); }
+        }
+
+        function deleteCategory(id, idx) {
+            const mod = resumeData.modules.find(m => m.id === id);
+            if (mod) { mod.data.categories.splice(idx, 1); renderVisualEditor(); updatePreview(); triggerAutoSave(); }
+        }
+
+        // --- Module Management ---
+        function openModuleModal() { document.getElementById('moduleModal').classList.add('active'); }
+        
+        function renderModuleModalBody() {
+            const body = document.getElementById('moduleModalBody');
+            body.innerHTML = Object.keys(moduleTypes).map(key => {
+                const t = moduleTypes[key];
+                return `
+                    <div class="module-template" onclick="addModule('${key}')">
+                        <div class="module-template-icon">${icons[t.icon]}</div>
+                        <div class="module-template-info"><h4>${t.name}</h4><p>Add a new ${t.name.toLowerCase()} section</p></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function addModule(type) {
+            const typeInfo = moduleTypes[type];
+            const newMod = {
+                id: 'mod_' + Date.now(),
+                type: type,
+                data: JSON.parse(JSON.stringify(typeInfo.defaultData))
+            };
+            resumeData.modules.push(newMod);
+            closeModal('moduleModal');
+            selectModule(newMod.id);
+            renderModuleList();
+            triggerAutoSave();
+            showToast('Module added');
+        }
+
+        function deleteModule(id) {
+            resumeData.modules = resumeData.modules.filter(m => m.id !== id);
+            if (resumeData.activeModule === id) resumeData.activeModule = resumeData.modules[0]?.id || null;
+            renderModuleList();
+            resumeData.activeModule ? renderVisualEditor() : renderEmptyState();
+            updatePreview();
+            triggerAutoSave();
+        }
+
+        // --- Preview & LaTeX ---
+        function updatePreview() {
+            const preview = document.getElementById('resumePreview');
+            const template = document.getElementById('templateSelect').value;
+            preview.className = `resume-preview ${template}`;
+            
+            let html = '';
+            resumeData.modules.forEach(mod => {
+                if (mod.type === 'header') html += genHTML.header(mod.data, template);
+                else if (mod.type === 'summary') html += genHTML.summary(mod.data);
+                else if (mod.type === 'experience') html += genHTML.experience(mod.data);
+                else if (mod.type === 'education') html += genHTML.education(mod.data);
+                else if (mod.type === 'skills') html += genHTML.skills(mod.data);
+                else if (mod.type === 'projects') html += genHTML.projects(mod.data);
+                else if (mod.type === 'custom') html += `<div style="padding:10px; background:#f9f9f9; border:1px dashed #ccc; margin:10px 0;"><pre style="white-space:pre-wrap; font-size:9pt; color:#555;">${mod.data.latex}</pre></div>`;
+            });
+            preview.innerHTML = html;
+        }
+
+        const genHTML = {
+            header: (d, t) => {
+                return `
+                    <div class="resume-header">
+                        <div class="resume-name">${d.name || 'Your Name'}</div>
+                        ${d.title ? `<div style="font-size:11pt; color:#555; margin:3px 0;">${d.title}</div>` : ''}
+                        <div class="resume-contact">${[d.email, d.phone, d.location].filter(Boolean).join(' | ')}</div>
+                        <div class="resume-contact">${[d.linkedin, d.website].filter(Boolean).join(' | ')}</div>
+                    </div>
+                `;
+            },
+            summary: (d) => d.text ? `<div class="resume-section"><div class="resume-section-title">Professional Summary</div><p style="color:#333;">${d.text}</p></div>` : '',
+            experience: (d) => {
+                if (!d.entries?.length) return '';
+                let h = `<div class="resume-section"><div class="resume-section-title">Work Experience</div>`;
+                d.entries.forEach(e => {
+                    h += `<div class="resume-entry"><div class="resume-entry-header"><div><span class="resume-entry-title">${e.title||''}</span> <span class="resume-entry-subtitle">— ${e.company||''}, ${e.location||''}</span></div><span class="resume-entry-date">${e.startDate||''} — ${e.endDate||''}</span></div>`;
+                    if(e.description) h += `<ul>${e.description.split('\n').filter(l=>l.trim()).map(l=>`<li>${l.replace(/^[•\-\*]\s*/,'')}</li>`).join('')}</ul>`;
+                    h += `</div>`;
+                });
+                return h + `</div>`;
+            },
+            education: (d) => {
+                if (!d.entries?.length) return '';
+                let h = `<div class="resume-section"><div class="resume-section-title">Education</div>`;
+                d.entries.forEach(e => {
+                    h += `<div class="resume-entry"><div class="resume-entry-header"><div><span class="resume-entry-title">${e.degree||''}</span> <span class="resume-entry-subtitle">— ${e.school||''}</span></div><span class="resume-entry-date">${e.startDate||''} — ${e.endDate||''}</span></div><div style="font-size:9pt; color:#555;">${e.gpa ? `GPA: ${e.gpa}` : ''} ${e.details ? `| ${e.details}` : ''}</div></div>`;
+                });
+                return h + `</div>`;
+            },
+            skills: (d) => {
+                if (!d.categories?.length) return '';
+                let h = `<div class="resume-section"><div class="resume-section-title">Skills</div>`;
+                d.categories.forEach(c => {
+                    h += `<div style="margin-bottom:5px;"><strong>${c.name}:</strong> ${c.skills}</div>`;
+                });
+                return h + `</div>`;
+            },
+            projects: (d) => {
+                if (!d.entries?.length) return '';
+                let h = `<div class="resume-section"><div class="resume-section-title">Projects</div>`;
+                d.entries.forEach(e => {
+                    h += `<div class="resume-entry"><div class="resume-entry-header"><div><span class="resume-entry-title">${e.name||''}</span> ${e.tech ? `<span class="resume-entry-subtitle">(${e.tech})</span>` : ''}</div><span class="resume-entry-date">${e.link||''}</span></div><div style="font-size:9pt; color:#333;">${e.description||''}</div></div>`;
+                });
+                return h + `</div>`;
+            }
+        };
+
+        function generateFullLatex() {
+            let tex = `\\documentclass[11pt,a4paper]{article}\n\\usepackage[utf8]{inputenc}\n\\usepackage[T1]{fontenc}\n\\usepackage{geometry}\n\\geometry{margin=0.75in}\n\\usepackage{hyperref}\n\\usepackage{titlesec}\n\\usepackage{enumitem}\n\\titleformat{\\section}{\\Large\\bfseries\\uppercase}{}{0em}{}[\\titlerule]\n\\titlespacing{\\section}{0pt}{12pt}{8pt}\n\\begin{document}\n\\pagestyle{empty}\n\n`;
+            resumeData.modules.forEach(mod => {
+                const lt = moduleTypes[mod.type].generateLatex(mod.data);
+                if (lt) tex += lt + '\n\n';
+            });
+            return tex + '\\end{document}';
+        }
+
+        function updateLatexTextarea() {
+            const mod = resumeData.modules.find(m => m.id === resumeData.activeModule);
+            if (mod) document.getElementById('latexTextarea').value = moduleTypes[mod.type].generateLatex(mod.data);
+        }
+
+        function changeTemplate() {
+            resumeData.template = document.getElementById('templateSelect').value;
+            updatePreview();
+        }
+
+        // --- Import Logic ---
+        function parseLatex(latexStr) {
+            // Reset data
+            const newModules = [];
+            
+            // Helper to extract content between braces, handling nested braces simply
+            const extractBraceContent = (str, startIdx) => {
+                if (str[startIdx] !== '{') return null;
+                let depth = 1;
+                let content = '';
+                for (let i = startIdx + 1; i < str.length; i++) {
+                    if (str[i] === '{') depth++;
+                    if (str[i] === '}') depth--;
+                    if (depth === 0) return { content, endIndex: i };
+                    content += str[i];
+                }
+                return null;
+            };
+
+            // 1. Header
+            const centerMatch = latexStr.match(/\\begin\{center\}([\s\S]*?)\\end\{center\}/);
+            if (centerMatch) {
+                const hData = { name: '', title: '', email: '', phone: '', location: '', linkedin: '', website: '' };
+                const block = centerMatch[1];
+                
+                const nameMatch = block.match(/\\textbf\{([^}]+)\}/);
+                if (nameMatch) hData.name = nameMatch[1];
+
+                const titleMatch = block.match(/\\textit\{([^}]+)\}/);
+                if (titleMatch) hData.title = titleMatch[1];
+
+                // Split by lines and look for contact info patterns
+                const lines = block.split('\\\\').map(l => l.trim()).filter(l => l && !l.includes('textbf') && !l.includes('textit'));
+                if (lines.length > 0) {
+                    const parts = lines[0].split('$|$').map(p => p.trim());
+                    // Heuristic: email has @, phone has digits, rest is location
+                    parts.forEach(p => {
+                        if (p.includes('@')) hData.email = p;
+                        else if (/\d/.test(p) && !p.includes('http')) hData.phone = p;
+                        else if (!p.includes('http')) hData.location = p;
+                    });
+                }
+                if (lines.length > 1) {
+                    const parts = lines[1].split('$|$').map(p => p.trim());
+                    parts.forEach(p => {
+                        if (p.includes('linkedin')) hData.linkedin = p;
+                        else if (p.includes('.') || p.includes('http')) hData.website = p;
+                    });
+                }
+
+                newModules.push({ id: 'mod_head_' + Date.now(), type: 'header', data: hData });
+            }
+
+            // 2. Sections
+            // Match \section*{Title} ... until next \section or \end{document}
+            const sectionRegex = /\\section\*\{([^}]+)\}([\s\S]*?)(?=\\section\*|\\end\{document\})/g;
+            let match;
+            while ((match = sectionRegex.exec(latexStr)) !== null) {
+                const title = match[1].trim();
+                const body = match[2].trim();
+                
+                if (title.toLowerCase().includes('summary')) {
+                    newModules.push({ id: 'mod_sum_' + Date.now(), type: 'summary', data: { text: body } });
+                } 
+                else if (title.toLowerCase().includes('experience')) {
+                    const entries = [];
+                    // Split by \item
+                    const items = body.split(/\\item/).filter(i => i.trim());
+                    items.forEach(item => {
+                        const entry = { title: '', company: '', location: '', startDate: '', endDate: '', description: '' };
+                        // Regex for bold title
+                        const boldMatch = item.match(/\\textbf\{([^}]+)\}/);
+                        if (boldMatch) entry.title = boldMatch[1];
+                        
+                        // Regex for the rest of the first line (Company, Location)
+                        const firstLine = item.split('\\\\')[0];
+                        const restOfLine = firstLine.replace(/\\textbf\{[^}]+\}/, '').replace('---', '').trim();
+                        const parts = restOfLine.split(',').map(p => p.trim());
+                        if (parts.length > 0) entry.company = parts[0];
+                        if (parts.length > 1) entry.location = parts.slice(1).join(', ');
+
+                        // Regex for Date
+                        const dateMatch = item.match(/\\textit\{([^}]+)\}/);
+                        if (dateMatch) {
+                            const dates = dateMatch[1].split('--').map(d => d.trim());
+                            entry.startDate = dates[0] || '';
+                            entry.endDate = dates[1] || '';
+                        }
+
+                        // Description (everything after the date line)
+                        const lines = item.split('\\\\').map(l => l.trim()).filter(l => l);
+                        const descLines = [];
+                        let startDesc = false;
+                        for (let line of lines) {
+                            if (startDesc) descLines.push(line);
+                            if (line.includes('\\textit{')) startDesc = true;
+                        }
+                        entry.description = descLines.join('\n');
+
+                        entries.push(entry);
+                    });
+                    newModules.push({ id: 'mod_exp_' + Date.now(), type: 'experience', data: { entries } });
+                }
+                else if (title.toLowerCase().includes('education')) {
+                    const entries = [];
+                    const items = body.split(/\\item/).filter(i => i.trim());
+                    items.forEach(item => {
+                        const entry = { degree: '', school: '', location: '', startDate: '', endDate: '', gpa: '', details: '' };
+                        const boldMatch = item.match(/\\textbf\{([^}]+)\}/);
+                        if (boldMatch) entry.degree = boldMatch[1];
+                        
+                        const firstLine = item.split('\\\\')[0];
+                        const restOfLine = firstLine.replace(/\\textbf\{[^}]+\}/, '').replace('---', '').trim();
+                        entry.school = restOfLine; // Simple assignment
+
+                        const dateMatch = item.match(/\\textit\{([^}]+)\}/);
+                        if (dateMatch) {
+                            const dates = dateMatch[1].split('--').map(d => d.trim());
+                            entry.startDate = dates[0] || '';
+                            entry.endDate = dates[1] || '';
+                        }
+
+                        // Very simple GPA detection
+                        const gpaMatch = item.match(/GPA: ([0-9.]+)/);
+                        if (gpaMatch) entry.gpa = gpaMatch[1];
+
+                        entries.push(entry);
+                    });
+                    newModules.push({ id: 'mod_edu_' + Date.now(), type: 'education', data: { entries } });
+                }
+                else if (title.toLowerCase().includes('skill')) {
+                    const categories = [];
+                    const items = body.split(/\\item/).filter(i => i.trim());
+                    items.forEach(item => {
+                        const cat = { name: '', skills: '' };
+                        const boldMatch = item.match(/\\textbf\{([^}]+):\}/) || item.match(/\\textbf\{([^}]+)\}/);
+                        if (boldMatch) {
+                            cat.name = boldMatch[1];
+                            // Get text after the bold part
+                            const parts = item.split(/\\textbf\{[^}]+\}/);
+                            if (parts[1]) cat.skills = parts[1].trim();
+                        }
+                        categories.push(cat);
+                    });
+                    newModules.push({ id: 'mod_ski_' + Date.now(), type: 'skills', data: { categories } });
+                }
+                else {
+                    // If unknown section, add as Custom LaTeX block
+                    newModules.push({ id: 'mod_cus_' + Date.now(), type: 'custom', data: { latex: `\\section*{${title}}\n${body}` } });
+                }
+            }
+
+            if (newModules.length > 0) {
+                resumeData.modules = newModules;
+                resumeData.activeModule = newModules[0].id;
+                renderModuleList();
+                renderVisualEditor();
+                updatePreview();
+                triggerAutoSave();
+                return true;
+            }
+            return false;
+        }
+
+        // --- Export Logic ---
+        function exportPDF() {
+            closeModal('exportModal');
+            const preview = document.getElementById('resumePreview');
+            const win = window.open('', '_blank');
+            win.document.write(`<html><head><title>Resume</title><style>body{margin:0; padding:0; display:flex; justify-content:center;} .resume-preview{box-shadow:none; margin:0; border:none;}</style></head><body>${preview.outerHTML}</body></html>`);
+            win.document.close();
+            setTimeout(() => win.print(), 250);
+        }
+
+        function exportLaTeX() {
+            closeModal('exportModal');
+            const blob = new Blob([generateFullLatex()], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${document.getElementById('projectName').value.replace(/\s+/g, '_')}.tex`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            showToast('LaTeX Exported');
+        }
+
+        // --- UI Helpers ---
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function openExportModal() { document.getElementById('exportModal').classList.add('active'); }
+        
+        function switchEditorTab(tab) {
+            document.querySelectorAll('.editor-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.editor-tab[data-tab="${tab}"]`).classList.add('active');
+            if (tab === 'visual') {
+                document.getElementById('visualEditor').classList.add('active');
+                document.getElementById('latexEditor').classList.remove('active');
+            } else {
+                document.getElementById('visualEditor').classList.remove('active');
+                document.getElementById('latexEditor').classList.add('active');
+                updateLatexTextarea();
+            }
+        }
+
+        function switchPreviewTab(tab) {
+            document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.preview-tab[data-preview="${tab}"]`).classList.add('active');
+            if (tab === 'preview') {
+                document.getElementById('resumePreview').style.display = 'block';
+                const latOut = document.getElementById('latexOutput');
+                if (latOut) latOut.remove();
+            } else {
+                document.getElementById('resumePreview').style.display = 'none';
+                const pre = document.createElement('pre');
+                pre.id = 'latexOutput';
+                pre.className = 'latex-preview'; // Reuse editor style
+                pre.style.cssText = 'background:#1e1e1e; color:#d4d4d4; padding:20px; width:100%; overflow:auto; font-family:monospace; white-space:pre-wrap;';
+                pre.textContent = generateFullLatex();
+                document.getElementById('previewContent').appendChild(pre);
+            }
+        }
+
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icon = type === 'success' ? '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>' : '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>';
+            toast.innerHTML = `<svg viewBox="0 0 24 24">${icon}</svg><span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // --- Setup Listeners ---
+        function setupListeners() {
+            // File Import
+            const fileInput = document.getElementById('fileInput');
+            const importBtn = document.getElementById('importBtn');
+            
+            importBtn.addEventListener('click', () => fileInput.click());
+            
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const content = evt.target.result;
+                    if (parseLatex(content)) {
+                        showToast('LaTeX Imported Successfully', 'success');
+                    } else {
+                        showToast('Could not parse LaTeX structure', 'info');
+                    }
+                };
+                reader.readAsText(file);
+                fileInput.value = ''; // Reset
+            });
+
+            // Project Name
+            document.getElementById('projectName').addEventListener('input', triggerAutoSave);
+
+            // Modal Overlays
+            document.querySelectorAll('.modal-overlay').forEach(overlay => {
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) overlay.classList.remove('active');
+                });
+            });
+        }
+
+        function setupResize() {
+            const handle = document.getElementById('resizeHandle');
+            const panel = document.getElementById('previewPanel');
+            let isResizing = false;
+
+            handle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                document.body.style.cursor = 'col-resize';
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const newWidth = window.innerWidth - e.clientX;
+                if (newWidth > 300 && newWidth < 900) {
+                    panel.style.width = newWidth + 'px';
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isResizing = false;
+                document.body.style.cursor = '';
+            });
+        }
+
+        // Init
+        init();
+
+    </script>
+</body>
+</html>
